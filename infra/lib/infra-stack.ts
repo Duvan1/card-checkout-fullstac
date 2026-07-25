@@ -122,6 +122,10 @@ export class InfraStack extends cdk.Stack {
       value: `https://${frontendDistribution.distributionDomainName}`,
       description: 'URL pública de la CDN del Frontend',
     });
-    
+
+    new cdk.CfnOutput(this, 'FrontendDistributionId', {
+      value: frontendDistribution.distributionId,
+      description: 'ID de la distribución de CloudFront',
+    });    
   }
 }
