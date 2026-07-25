@@ -20,7 +20,7 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, 
       autoDeleteImages: true,
     });
-
+ 
     const postgresDb = new rds.DatabaseInstance(this, 'PostgresDatabase', {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_16,
@@ -43,6 +43,37 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'EcrRepositoryUri', {
       value: ecrRepository.repositoryUri,
       description: 'URI del repositorio ECR para subir la imagen de Docker',
+    });
+
+    const fargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'BackendFargateService', {
+      cluster: ecsCluster,
+      cpu: 256, 
+      memoryLimitMiB: 512, 
+      desiredCount: 1,
+      taskImageOptions: {
+        image: ecs.ContainerImage.fromEcrRepository(ecrRepository, 'latest'),
+        containerPort: 3000,
+        environment: {
+          NODE_ENV: 'production',
+          PORT: '3000',
+          DB_HOST: postgresDb.dbInstanceEndpointAddress,
+          DB_PORT: '5432',
+          DB_NAME: 'card_checkout',
+          DB_USER: 'postgres',
+        },
+        secrets: {
+          
+          DB_PASSWORD: ecs.Secret.fromSecretsManager(postgresDb.secret!, 'password'),
+        },
+      },
+      publicLoadBalancer: true, 
+    });
+
+    postgresDb.connections.allowDefaultPortFrom(fargateService.service);
+ 
+    new cdk.CfnOutput(this, 'BackendUrl', {
+      value: fargateService.loadBalancer.loadBalancerDnsName,
+      description: 'URL pública del Backend en AWS ECS',
     });
   }
 }
