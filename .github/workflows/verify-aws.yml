@@ -1,0 +1,26 @@
+name: Verify AWS OIDC Connection
+
+on:
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  id-token: write # Requerido para solicitar el token OIDC a AWS
+  contents: read
+
+jobs:
+  verify-aws:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Identity
+        run: |
+          aws sts get-caller-identity
