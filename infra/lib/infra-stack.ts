@@ -85,10 +85,22 @@ export class InfraStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // 7. Distribución de CloudFront (CDN)
     const frontendDistribution = new cloudfront.Distribution(this, 'FrontendDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+      additionalBehaviors: {
+        '/api/*': {
+          origin: new origins.HttpOrigin(fargateService.loadBalancer.loadBalancerDnsName, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
       },
       defaultRootObject: 'index.html',
       errorResponses: [
@@ -110,5 +122,6 @@ export class InfraStack extends cdk.Stack {
       value: `https://${frontendDistribution.distributionDomainName}`,
       description: 'URL pública de la CDN del Frontend',
     });
+    
   }
 }
