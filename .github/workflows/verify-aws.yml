@@ -2,7 +2,7 @@ name: Verify AWS OIDC Connection
 
 on:
   push:
-    branches: [ main, develop, dev ]
+    branches: [ main, develop ]
 
 permissions:
   id-token: write # Requerido para solicitar el token OIDC a AWS
