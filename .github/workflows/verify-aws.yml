@@ -1,0 +1,42 @@
+name: Verify AWS OIDC Connection
+
+on:
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  id-token: write # Requerido para solicitar el token OIDC a AWS
+  contents: read
+
+jobs:
+  verify-aws:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Debug GitHub Context
+        run: |
+          echo "Repository=${{ github.repository }}"
+          echo "Ref=${{ github.ref }}"
+
+      - name: Print OIDC token claims
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('sts.amazonaws.com');
+            const payload = JSON.parse(
+              Buffer.from(token.split('.')[1], 'base64').toString()
+            );
+
+            console.log(JSON.stringify(payload, null, 2));
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Identity
+        run: |
+          aws sts get-caller-identity
