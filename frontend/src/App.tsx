@@ -9,17 +9,16 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string>('Conectando con AWS...')
 
   useEffect(() => {
-    // Lee la variable de entorno inyectada por GitHub Actions o usa el fallback local
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
     fetch(apiUrl)
       .then((res) => res.text())
       .then((data) => setBackendStatus(data))
       .catch((err) => {
-        console.error('Error fetching backend:', err)
-        setBackendStatus('Error al conectar con el backend')
-      })
-  }, [])
+        console.error('Error fetching backend:', err);
+        setBackendStatus('Error al conectar con el backend');
+      });
+  }, []);
 
   return (
     <>
