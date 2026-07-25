@@ -41,3 +41,17 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # 🚀 NUEVO PASO: Fuerza el despliegue automático en ECS Fargate
+      - name: Force ECS Redeployment
+        run: |
+          # Obtiene dinámicamente el ARN/nombre del servicio dentro de CardCheckoutCluster
+          SERVICE_NAME=$(aws ecs list-services --cluster CardCheckoutCluster --query "serviceArns[0]" --output text)
+          
+          echo "Desplegando en el servicio: $SERVICE_NAME"
+          
+          aws ecs update-service \
+            --cluster CardCheckoutCluster \
+            --service $SERVICE_NAME \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION }}
