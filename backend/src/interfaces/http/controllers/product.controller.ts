@@ -4,6 +4,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   Param,
+  Query,
 } from '@nestjs/common';
 import { GetProductsUseCase } from '../../../application/use-cases/get-products.use-case';
 import { GetProductByIdUseCase } from '../../../application/use-cases/get-product-by-id.use-case';
@@ -16,8 +17,20 @@ export class ProductController {
   ) {}
 
   @Get()
-  async findAll() {
-    const result = await this.getProductsUseCase.execute();
+  async findAll(
+    @Query('search') search?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
+    const result = await this.getProductsUseCase.execute({
+      search,
+      minPrice: minPrice !== undefined ? Number(minPrice) : undefined,
+      maxPrice: maxPrice !== undefined ? Number(maxPrice) : undefined,
+      sortBy: isValidSortBy(sortBy) ? sortBy : undefined,
+      sortOrder: isValidSortOrder(sortOrder) ? sortOrder : undefined,
+    });
 
     if (!result.ok) {
       throw new InternalServerErrorException(result.error.message);
@@ -60,4 +73,12 @@ export class ProductController {
       updatedAt: product.updatedAt,
     };
   }
+}
+
+function isValidSortBy(value?: string): value is 'price' | 'name' | 'stock' {
+  return value === 'price' || value === 'name' || value === 'stock';
+}
+
+function isValidSortOrder(value?: string): value is 'asc' | 'desc' {
+  return value === 'asc' || value === 'desc';
 }

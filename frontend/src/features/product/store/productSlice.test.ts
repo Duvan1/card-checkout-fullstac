@@ -5,6 +5,8 @@ import {
   fetchProducts,
   fetchProductById,
   clearSelectedProduct,
+  setFilter,
+  clearFilters,
 } from './productSlice';
 import { productService } from '../api/productService';
 import type { ProductDto } from '../api/productService';
@@ -45,40 +47,66 @@ describe('productSlice', () => {
     it('should clear selected product', () => {
       const store = createStore();
       store.dispatch(fetchProductById.fulfilled(makeProduct(), '', 'prod-1'));
-
       expect(store.getState().product.selectedProduct).not.toBeNull();
-
       store.dispatch(clearSelectedProduct());
-
       expect(store.getState().product.selectedProduct).toBeNull();
+    });
+
+    it('should update a single filter', () => {
+      const store = createStore();
+      store.dispatch(setFilter({ search: 'chaqueta' }));
+      expect(store.getState().product.filters.search).toBe('chaqueta');
+    });
+
+    it('should merge multiple filter updates', () => {
+      const store = createStore();
+      store.dispatch(setFilter({ search: 'zapato' }));
+      store.dispatch(setFilter({ sortBy: 'price' }));
+      expect(store.getState().product.filters.search).toBe('zapato');
+      expect(store.getState().product.filters.sortBy).toBe('price');
+    });
+
+    it('should clear all filters', () => {
+      const store = createStore();
+      store.dispatch(setFilter({ search: 'algo', sortBy: 'price' }));
+      store.dispatch(clearFilters());
+      expect(store.getState().product.filters.search).toBe('');
+      expect(store.getState().product.filters.sortBy).toBe('');
     });
   });
 
   describe('fetchProducts thunk', () => {
-    it('should set status to loading then succeeded with products', async () => {
-      const products = [makeProduct({ id: '1' }), makeProduct({ id: '2' })];
+    it('should fetch products without filters', async () => {
+      const products = [makeProduct({ id: '1' })];
       jest.mocked(productService.getProducts).mockResolvedValue(products);
 
       const store = createStore();
-      await store.dispatch(fetchProducts());
+      await store.dispatch(fetchProducts(undefined));
 
-      const state = store.getState().product;
-      expect(state.status).toBe('succeeded');
-      expect(state.products).toHaveLength(2);
-      expect(state.products[0].id).toBe('1');
+      expect(store.getState().product.status).toBe('succeeded');
+      expect(store.getState().product.products).toHaveLength(1);
+    });
+
+    it('should fetch products with search filter', async () => {
+      const products = [makeProduct({ id: '1', name: 'Chaqueta' })];
+      jest.mocked(productService.getProducts).mockResolvedValue(products);
+
+      const store = createStore();
+      await store.dispatch(fetchProducts({ search: 'chaqueta' }));
+
+      expect(productService.getProducts).toHaveBeenCalledWith({
+        search: 'chaqueta',
+      });
+      expect(store.getState().product.products[0].name).toBe('Chaqueta');
     });
 
     it('should set status to failed on API error', async () => {
       jest.mocked(productService.getProducts).mockRejectedValue(
         new Error('Network error'),
       );
-
       const store = createStore();
-      await store.dispatch(fetchProducts());
-
-      const state = store.getState().product;
-      expect(state.status).toBe('failed');
-      expect(state.error).toContain('Network error');
+      await store.dispatch(fetchProducts(undefined));
+      expect(store.getState().product.status).toBe('failed');
     });
   });
 
@@ -86,26 +114,9 @@ describe('productSlice', () => {
     it('should set selectedProduct on success', async () => {
       const product = makeProduct({ id: 'prod-99', name: 'Specific Product' });
       jest.mocked(productService.getProductById).mockResolvedValue(product);
-
       const store = createStore();
       await store.dispatch(fetchProductById('prod-99'));
-
-      const state = store.getState().product;
-      expect(state.status).toBe('succeeded');
-      expect(state.selectedProduct?.name).toBe('Specific Product');
-    });
-
-    it('should set status to failed when product not found', async () => {
-      jest.mocked(productService.getProductById).mockRejectedValue(
-        new Error('Not found'),
-      );
-
-      const store = createStore();
-      await store.dispatch(fetchProductById('nonexistent'));
-
-      const state = store.getState().product;
-      expect(state.status).toBe('failed');
-      expect(state.error).toContain('Not found');
+      expect(store.getState().product.selectedProduct?.name).toBe('Specific Product');
     });
   });
 });

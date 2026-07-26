@@ -1,11 +1,18 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { productService, type ProductDto } from '../api/productService';
+import { productService, type ProductDto, type ProductFilters } from '../api/productService';
+
+interface FilterState {
+  search: string;
+  sortBy: string;
+  sortOrder: string;
+}
 
 interface ProductState {
   products: ProductDto[];
   selectedProduct: ProductDto | null;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
+  filters: FilterState;
 }
 
 const initialState: ProductState = {
@@ -13,12 +20,17 @@ const initialState: ProductState = {
   selectedProduct: null,
   status: 'idle',
   error: null,
+  filters: {
+    search: '',
+    sortBy: '',
+    sortOrder: 'desc',
+  },
 };
 
 export const fetchProducts = createAsyncThunk(
   'product/fetchProducts',
-  async () => {
-    return productService.getProducts();
+  async (filters: ProductFilters | undefined) => {
+    return productService.getProducts(filters);
   },
 );
 
@@ -36,6 +48,12 @@ const productSlice = createSlice({
     clearSelectedProduct: (state) => {
       state.selectedProduct = null;
     },
+    setFilter: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    clearFilters: (state) => {
+      state.filters = initialState.filters;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -49,7 +67,7 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.error.message ?? 'Failed to fetch products';
+        state.error = action.error.message ?? 'Error al obtener productos';
       })
       .addCase(fetchProductById.pending, (state) => {
         state.status = 'loading';
@@ -61,10 +79,10 @@ const productSlice = createSlice({
       })
       .addCase(fetchProductById.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.error.message ?? 'Failed to fetch product';
+        state.error = action.error.message ?? 'Error al obtener producto';
       });
   },
 });
 
-export const { clearSelectedProduct } = productSlice.actions;
+export const { clearSelectedProduct, setFilter, clearFilters } = productSlice.actions;
 export const productReducer = productSlice.reducer;

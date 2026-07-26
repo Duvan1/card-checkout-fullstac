@@ -1,16 +1,46 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProductRepository } from '../../../domain/repositories/product-repository.port';
+import {
+  ProductRepository,
+  type ProductFilters,
+} from '../../../domain/repositories/product-repository.port';
 import { Product } from '../../../domain/entities/product';
 import { Money } from '../../../domain/value-objects/money';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductPrismaRepository implements ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(): Promise<Product[]> {
+  async findAll(filters?: ProductFilters): Promise<Product[]> {
+    const where: Prisma.ProductWhereInput = {};
+
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters?.minPrice !== undefined || filters?.maxPrice !== undefined) {
+      where.price = {};
+      if (filters.minPrice !== undefined) {
+        where.price.gte = filters.minPrice;
+      }
+      if (filters.maxPrice !== undefined) {
+        where.price.lte = filters.maxPrice;
+      }
+    }
+
+    const orderBy: Prisma.ProductOrderByWithRelationInput = {};
+    const sortBy = filters?.sortBy ?? 'createdAt';
+    const sortOrder = filters?.sortOrder ?? 'desc';
+
+    orderBy[sortBy] = sortOrder;
+
     const rows = await this.prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
+      where,
+      orderBy,
     });
 
     return rows.map((row) => this.toDomain(row));
@@ -41,6 +71,7 @@ export class ProductPrismaRepository implements ProductRepository {
 
     return this.toDomain(row);
   }
+
   private toDomain(row: {
     id: string;
     name: string;
