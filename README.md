@@ -8,7 +8,7 @@ Aplicacion Full Stack que simula el checkout de un producto consumiendo una API 
 
 | Capa | Tecnologia |
 |------|-----------|
-| **Frontend** | React 19 · TypeScript · Vite 8 · Redux Toolkit · React Router · TailwindCSS v4 · Jest · React Testing Library |
+| **Frontend** | React 19 · TypeScript · Vite 8 · Redux Toolkit · React Router · React Hook Form + Zod · TailwindCSS v4 · Jest · React Testing Library |
 | **Backend** | NestJS 11 · TypeScript · Prisma v7 · PostgreSQL 16 · Jest · Supertest |
 | **Infra** | AWS CDK 2 · S3 · CloudFront · ECS Fargate · RDS · Docker · GitHub Actions |
 | **Diseno** | Stitch (Fintech E-commerce System) · Inter · Mobile-first |
@@ -19,19 +19,18 @@ Aplicacion Full Stack que simula el checkout de un producto consumiendo una API 
 
 ```
 src/
-├── domain/               # Entidades, Value Objects, Puertos (interfaces)
+├── domain/
 │   ├── entities/          # Product
-│   ├── value-objects/     # Money, CardNumber (próximo)
+│   ├── value-objects/     # Money, CardNumber
 │   ├── repositories/      # IProductRepository, IPaymentGateway (próximo)
-│   └── services/          # Lógica de dominio pura
-├── application/           # Casos de uso + DTOs
+│   └── services/
+├── application/
 │   ├── common/            # Result<T,E>
-│   ├── dto/               # (próximo)
 │   └── use-cases/         # GetProducts, GetProductById
-├── infrastructure/        # Adaptadores concretos
+├── infrastructure/
 │   ├── persistence/       # PrismaService, ProductPrismaRepository
 │   └── payment-gateway/   # (próximo)
-└── interfaces/            # Controllers HTTP
+└── interfaces/
     └── http/
         ├── controllers/   # ProductController
         ├── webhooks/      # (próximo)
@@ -42,6 +41,13 @@ src/
 - El dominio nunca importa de capas externas
 - Los controladores solo reciben peticiones y delegan en use cases
 - Las integraciones externas (Prisma, pasarela de pagos) se implementan como adapters detras de puertos definidos en dominio
+
+### Value Objects
+
+| VO | Descripcion |
+|----|-------------|
+| `Money` | Inmutable, `amount >= 0`, moneda `COP`. Operaciones: `add`, `subtract`, `multiply` |
+| `CardNumber` | Validacion Luhn, deteccion BIN (Visa/MasterCard), enmascaramiento. `toString()` nunca expone el PAN completo |
 
 ### Railway Oriented Programming (ROP)
 
@@ -63,6 +69,8 @@ Cada paso del caso de uso se encadena. Un fallo en cualquier eslabon corta la ca
 | `InsufficientStockError` | 409 |
 | Generico | 500 |
 
+La deteccion de errores usa `instanceof` (no `constructor.name`), garantizando que funcione tras minificacion/bundling.
+
 ### Decision de Arquitectura: Webhook vs Polling
 
 - **Webhook (primario)**: `POST /webhooks/payment-events` con validacion de firma de integridad. Mas fiel al comportamiento real de un gateway.
@@ -78,23 +86,40 @@ Cada paso del caso de uso se encadena. Un fallo en cualquier eslabon corta la ca
 src/
 ├── app/
 │   ├── router.tsx         # React Router (layout + rutas)
-│   └── store.ts           # Redux Toolkit
+│   └── store.ts           # Redux Toolkit (product + checkout)
 ├── features/
 │   ├── product/
 │   │   ├── api/            # productService.ts
 │   │   ├── components/     # ProductCard, ProductList, ProductDetail, FilterBar
 │   │   └── store/          # productSlice.ts
-│   ├── checkout/           # (próximo)
-│   ├── payment/            # (próximo)
-│   └── transaction/        # (próximo)
+│   └── checkout/
+│       ├── components/     # CheckoutPage, CreditCardPreview, ShippingSection, PaymentSection
+│       ├── store/          # checkoutSlice.ts, checkoutTypes.ts
+│       └── checkoutSchema.ts  # Zod schema
 ├── layouts/
-│   └── MainLayout.tsx     # Header + footer + Outlet
-├── shared/
-│   ├── api/               # Axios client
-│   ├── components/        # (próximo)
-│   └── hooks/             # useAppDispatch, useAppSelector, useDebounce
-└── pages/                 # (próximo)
+│   └── MainLayout.tsx     # Header sticky + nav + footer
+└── shared/
+    ├── api/               # Axios client
+    ├── components/        # CheckoutStepper (reutilizable)
+    ├── hooks/             # useAppDispatch, useAppSelector, useDebounce
+    └── utils/             # luhn.ts, binDetect.ts (con @see cross-ref a backend)
 ```
+
+### Flujo de navegacion
+
+```
+/ (catalogo) → click en producto → /product/:id (detalle + selector cantidad)
+  → "Proceder al Pago" → /checkout (formulario + CreditCardPreview)
+  → "Continuar al Resumen" → (próximo)
+```
+
+### Seguridad de datos en frontend
+
+- El numero completo de tarjeta (PAN) **jamas se persiste** en Redux ni localStorage
+- `CreditCardPreview` muestra solo version enmascarada (`**** **** **** 4242`)
+- Deteccion de marca (Visa/MasterCard) en tiempo real al escribir
+- Validacion Luhn en cliente (Zod) y servidor (CardNumber VO)
+- Formateo automatico: tarjeta en grupos de 4, vencimiento `MM/YY` auto-insertado
 
 ---
 
@@ -115,7 +140,7 @@ model Product {
 }
 ```
 
-### Modelo Completo (próximas fases)
+### Modelo Completo (proximas fases)
 
 | Entidad | Relacion | Descripcion |
 |---------|----------|-------------|
@@ -131,7 +156,7 @@ model Product {
 | Metodo | Ruta | Descripcion | Filtros |
 |--------|------|-------------|---------|
 | `GET` | `/api/health` | Health check | — |
-| `GET` | `/api/products` | Listar productos | `?search=&sortBy=price&sortOrder=asc` |
+| `GET` | `/api/products` | Listar productos | `?search=&minPrice=&maxPrice=&sortBy=price&sortOrder=asc` |
 | `GET` | `/api/products/:id` | Producto por ID | — |
 | `GET` | `/` | Health check ALB (sin prefix) | — |
 
@@ -143,6 +168,9 @@ curl http://localhost:3000/api/products
 
 # Buscar + ordenar
 curl "http://localhost:3000/api/products?search=chaqueta&sortBy=price&sortOrder=desc"
+
+# Filtrar por rango de precio
+curl "http://localhost:3000/api/products?minPrice=50000&maxPrice=200000"
 
 # Producto por ID
 curl http://localhost:3000/api/products/<uuid>
@@ -157,14 +185,14 @@ curl http://localhost:3000/api/health
 
 | | Backend | Frontend |
 |---|---|---|
-| **Statements** | 98.64% | 85.96% |
-| **Branches** | 87.50% | 68.25% |
-| **Functions** | 97.29% | 74.35% |
-| **Lines** | 98.50% | 88.18% |
-| **Tests** | 60 | 27 |
+| **Statements** | 98.40% | 86.77% |
+| **Branches** | 87.37% | 73.33% |
+| **Functions** | 95.45% | 75.00% |
+| **Lines** | 98.23% | 88.88% |
+| **Tests** | 72 | 35 |
 | **Runner** | Jest 30 | Jest 30 |
 
-> El pipeline de CI falla si el coverage baja de los thresholds configurados.
+> El pipeline de CI falla si el coverage baja de los thresholds configurados (backend: 80% global, frontend: 80/65/68/80).
 
 ---
 
@@ -208,8 +236,8 @@ npm run dev             # http://localhost:5173
 ```env
 PORT=3000
 DATABASE_URL=postgresql://postgres:admin@localhost:5432/card_checkout?schema=public
-PAYMENT_GATEWAY_API_KEY=     # (próxima fase)
-PAYMENT_GATEWAY_SIGNATURE_SECRET=  # (próxima fase)
+PAYMENT_GATEWAY_API_KEY=     # (proxima fase)
+PAYMENT_GATEWAY_SIGNATURE_SECRET=  # (proxima fase)
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -242,8 +270,8 @@ main          ← Produccion (deploy automatico)
 
 ```
 feat(product): add search and sort filters
-fix(security): strip card data from redux-persist
-test(checkout): add ROP chain error path tests
+fix(security): use instanceof instead of constructor.name
+refactor(checkout): split CheckoutPage into smaller components
 ```
 
 ---
@@ -276,12 +304,14 @@ cdk deploy
 
 ## Seguridad
 
-- **PAN nunca persistido**: El numero completo de tarjeta no se guarda en DB, localStorage ni logs. Solo se envia al gateway y se descarta.
+- **PAN nunca persistido**: El numero completo de tarjeta no se guarda en DB, localStorage ni logs. `CardNumber.toString()` y `toJSON()` retornan solo la version enmascarada (`**** **** **** 1234`).
+- **Validacion dual**: Luhn + BIN en backend (CardNumber VO) y frontend (shared/utils)
 - **Helmet**: Security headers (CSP, HSTS, X-Frame-Options, etc.)
 - **Rate Limiting**: 5 req/min en endpoints de pago (`@nestjs/throttler`)
 - **CORS**: Restringido al dominio del frontend
 - **Webhook**: Validacion de firma de integridad antes de procesar eventos
 - **Secrets**: Variables sensibles via GitHub Secrets / AWS Secrets Manager, nunca en codigo
+- **SSL**: `rejectUnauthorized` condicionado por `NODE_ENV` — solo deshabilitado en desarrollo
 
 ---
 
@@ -289,22 +319,36 @@ cdk deploy
 
 ```bash
 # Backend
-cd backend && npm test              # Unit + integration
-cd backend && npm test -- --coverage # Con coverage
+cd backend && npm test              # Unit + integration (72 tests)
+cd backend && npm test -- --coverage
 
 # Frontend
-cd frontend && npm test              # Unit + componentes
-cd frontend && npm test -- --coverage # Con coverage
+cd frontend && npm test              # Unit + componentes (35 tests)
+cd frontend && npm test -- --coverage
 ```
+
+---
+
+## Calidad de Codigo
+
+El proyecto sigue principios SOLID y Clean Code. Una auditoria completa encontro 0 issues criticos activos. Los hallazgos principales fueron resueltos:
+
+- `CheckoutPage` dividido en 4 archivos (SRP)
+- `instanceof` en vez de `constructor.name`
+- Errores con `{ cause: error }` para preservar stack trace
+- `@see` cross-references en codigo duplicado backend↔frontend
+- SSL y logging condicionados por entorno
 
 ---
 
 ## Proximas Fases
 
+- [x] ~~Catalogo de productos (backend + frontend)~~
+- [x] ~~Value objects: Money, CardNumber~~
+- [x] ~~Formulario de tarjeta + direccion (frontend)~~
 - [ ] `POST /checkout` — Crear transaccion + procesar pago
 - [ ] `POST /webhooks/payment-events` — Recepcion de eventos del gateway
-- [ ] Formulario de tarjeta + direccion (frontend)
-- [ ] Backdrop de resumen de pago
-- [ ] Pantalla de resultado de transaccion
+- [ ] Backdrop de resumen de pago (frontend)
+- [ ] Pantalla de resultado de transaccion (frontend)
 - [ ] `redux-persist` con exclusion de datos de tarjeta
 - [ ] Prisma models: Transaction, Customer, Delivery
