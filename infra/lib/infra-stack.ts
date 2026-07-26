@@ -172,6 +172,15 @@ export class InfraStack extends cdk.Stack {
       );
 
 
+    fargateService.targetGroup.configureHealthCheck({
+      path: '/api/health',
+      interval: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(5),
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 3,
+    });
+
+
     postgresDb.connections.allowDefaultPortFrom(
       fargateService.service
     );
