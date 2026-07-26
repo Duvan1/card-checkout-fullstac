@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { fetchProductById } from '../store/productSlice';
+import { updateField } from '../../checkout/store/checkoutSlice';
 
 function Stepper() {
   return (
@@ -208,7 +209,10 @@ export function ProductDetail() {
           {/* Actions */}
           <div className="mt-8 space-y-4">
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={() => {
+                dispatch(updateField({ productId: selectedProduct.id, quantity }));
+                navigate('/checkout');
+              }}
               disabled={selectedProduct.stock === 0}
               className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg shadow-lg
                 hover:shadow-primary/20 hover:bg-primary-hover transition-all active:scale-95

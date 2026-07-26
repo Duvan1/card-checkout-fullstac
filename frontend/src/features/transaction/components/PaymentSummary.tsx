@@ -11,7 +11,7 @@ export function PaymentSummary() {
   const product = useAppSelector((state) => state.product.selectedProduct);
   const tx = useAppSelector((state) => state.transaction);
 
-  const quantity = 1;
+  const quantity = checkout.quantity || 1;
   const baseFee = 2500;
   const deliveryFee = 15000;
   const subtotal = (product?.price ?? 0) * quantity;
