@@ -32,6 +32,8 @@ jobs:
 
       - name: Get Infrastructure Outputs
         run: |
+          echo "Getting CloudFormation outputs..."
+
           echo "ECR_REPOSITORY=$(aws cloudformation describe-stacks \
             --stack-name InfraStack \
             --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryName'].OutputValue" \
@@ -53,10 +55,36 @@ jobs:
           echo "Cluster: $ECS_CLUSTER"
           echo "Service: $ECS_SERVICE"
 
+      - name: Validate Infrastructure Outputs
+        run: |
+          if [ -z "$ECR_REPOSITORY" ] || [ "$ECR_REPOSITORY" = "None" ]; then
+            echo "❌ ECR_REPOSITORY is empty"
+            echo "Available CloudFormation outputs:"
+            aws cloudformation describe-stacks \
+              --stack-name InfraStack \
+              --query "Stacks[0].Outputs"
+            exit 1
+          fi
+
+          if [ -z "$ECS_CLUSTER" ] || [ "$ECS_CLUSTER" = "None" ]; then
+            echo "❌ ECS_CLUSTER is empty"
+            exit 1
+          fi
+
+          if [ -z "$ECS_SERVICE" ] || [ "$ECS_SERVICE" = "None" ]; then
+            echo "❌ ECS_SERVICE is empty"
+            exit 1
+          fi
+
+          echo "✅ Infrastructure outputs validated"
+
       - name: Debug ECR variables
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           echo "REGISTRY=$ECR_REGISTRY"
           echo "REPOSITORY=$ECR_REPOSITORY"
+          echo "IMAGE_TAG=${{ github.sha }}"
 
       - name: Build, tag and push Docker image
         env:
@@ -65,8 +93,16 @@ jobs:
         run: |
           cd backend
 
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          echo "Building image:"
+          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            .
+
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
 
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
