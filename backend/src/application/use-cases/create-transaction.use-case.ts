@@ -65,7 +65,9 @@ export class CreateTransactionUseCase {
         return err(new ValidationError('Product not found'));
       }
 
-      if (!product.hasAvailableStock(dto.quantity)) {
+      try {
+        await this.productRepository.decrementStock(dto.productId, dto.quantity);
+      } catch (error) {
         return err(
           new InsufficientStockError(product.stock, dto.quantity),
         );

@@ -62,6 +62,7 @@ describe('CreateTransactionUseCase', () => {
 
   it('debería crear transacción PENDING con desglose correcto', async () => {
     productRepo.findById.mockResolvedValue(makeProduct({ stock: 10, price: 50000 }));
+    productRepo.decrementStock.mockResolvedValue(makeProduct({ stock: 8, price: 50000 }));
     const tx = makeTransaction({ quantity: 2, productPrice: 100000, baseFee: 2500, deliveryFee: 15000 });
     transactionRepo.create.mockResolvedValue(tx);
 
@@ -91,6 +92,7 @@ describe('CreateTransactionUseCase', () => {
 
   it('debería fallar si stock insuficiente', async () => {
     productRepo.findById.mockResolvedValue(makeProduct({ stock: 1 }));
+    productRepo.decrementStock.mockRejectedValue(new Error('Record to update not found'));
     const result = await useCase.execute(validDto);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBeInstanceOf(InsufficientStockError);
@@ -98,6 +100,7 @@ describe('CreateTransactionUseCase', () => {
 
   it('debería propagar error del repositorio', async () => {
     productRepo.findById.mockResolvedValue(makeProduct({ stock: 10 }));
+    productRepo.decrementStock.mockResolvedValue(makeProduct());
     transactionRepo.create.mockRejectedValue(new Error('DB error'));
     const result = await useCase.execute(validDto);
     expect(result.ok).toBe(false);

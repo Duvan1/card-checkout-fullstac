@@ -1,9 +1,10 @@
 import { Transaction } from '../entities/transaction';
+import type { TransactionStatus } from '../value-objects/transaction-status';
 
 export interface TransactionRepository {
   create(data: CreateTransactionData): Promise<Transaction>;
   findById(id: string): Promise<Transaction | null>;
-  updateStatus(id: string, status: string): Promise<Transaction>;
+  updateStatus(id: string, status: TransactionStatus): Promise<Transaction>;
 }
 
 export interface CreateTransactionData {
