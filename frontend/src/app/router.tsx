@@ -1,13 +1,14 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { ProductPage } from '../features/product/components/ProductPage';
+import { ProductList } from '../features/product/components/ProductList';
+import { ProductDetail } from '../features/product/components/ProductDetail';
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <ProductPage />,
+    element: <ProductList />,
   },
   {
     path: '/product/:id',
-    element: <ProductPage />,
+    element: <ProductDetail />,
   },
 ]);
