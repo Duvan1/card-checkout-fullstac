@@ -34,10 +34,27 @@ export function TransactionResult() {
       dispatch(fetchTransactionStatus(transaction.id));
     }, 3000);
     return () => clearInterval(interval);
-  }, [transaction?.id, paymentStatus]);
+  }, [transaction!.id, paymentStatus]);
 
-  const total = transaction?.totalAmount ?? 0;
-  const currency = transaction?.currency ?? 'COP';
+  if (!transaction) {
+    return (
+      <div className="flex-grow flex flex-col items-center justify-center px-4 py-16 gap-4">
+        <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center">
+          <span className="text-on-surface-variant text-4xl">?</span>
+        </div>
+        <h1 className="text-xl font-semibold text-on-surface">Sin transaccion activa</h1>
+        <p className="text-on-surface-variant text-sm">No hay una compra en curso.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 bg-primary text-on-primary py-3 px-8 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
+        >
+          Ir al catalogo
+        </button>
+      </div>
+    );
+  }
+  const total = transaction!.totalAmount;
+  const currency = transaction!.currency;
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center px-4 py-16 gap-12">
@@ -68,7 +85,7 @@ export function TransactionResult() {
             Transaccion Confirmada
           </p>
           <div className="w-full space-y-3 text-left bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/30 mb-8">
-            <Row label="ID de Transaccion" value={transaction?.id ?? ''} />
+            <Row label="ID de Transaccion" value={transaction.id} />
             <Row label="Monto Total" value={`${currency} ${total.toLocaleString()}`} bold />
           </div>
           <button
