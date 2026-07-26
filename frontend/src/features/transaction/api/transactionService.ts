@@ -28,6 +28,7 @@ export interface PayTransactionPayload {
   cardExpiryYear: string;
   cardHolder: string;
   installments: number;
+  customerEmail: string;
 }
 
 export interface PayTransactionResult {

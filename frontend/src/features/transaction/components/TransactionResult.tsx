@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
-import { processPayment } from '../store/transactionSlice';
+import { processPayment, resetTransaction } from '../store/transactionSlice';
 
 export function TransactionResult() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const checkout = useAppSelector((state) => state.checkout);
-  const { transaction, paymentStatus, error } = useAppSelector((state) => state.transaction);
+  const { transaction, paymentStatus } = useAppSelector((state) => state.transaction);
 
   useEffect(() => {
     if (transaction && checkout.cardNumber && paymentStatus === 'idle') {
@@ -18,9 +18,10 @@ export function TransactionResult() {
             cardNumber: checkout.cardNumber,
             cardCvc: checkout.cardCvv,
             cardExpiryMonth: checkout.cardExpiry.replace('/', '').substring(0, 2),
-            cardExpiryYear: '20' + checkout.cardExpiry.replace('/', '').substring(2, 4),
-            cardHolder: checkout.cardHolder,
+            cardExpiryYear: checkout.cardExpiry.replace('/', '').substring(2, 4),
+            cardHolder: checkout.cardHolder.toUpperCase(),
             installments: 1,
+            customerEmail: checkout.email,
           },
         }),
       );
@@ -32,7 +33,7 @@ export function TransactionResult() {
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center px-4 py-16 gap-12">
-      {['idle', 'processing'].includes(paymentStatus) && (
+      {['idle', 'processing', 'pending'].includes(paymentStatus) && (
         <div className="flex flex-col items-center justify-center p-12 bg-surface border border-outline-variant rounded-xl shadow-sm text-center max-w-md w-full">
           <div className="relative mb-8">
             <div className="w-24 h-24 rounded-full border-4 border-surface-container-highest border-t-primary animate-spin" />
@@ -63,7 +64,7 @@ export function TransactionResult() {
             <Row label="Monto Total" value={`${currency} ${total.toLocaleString()}`} bold />
           </div>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => { dispatch(resetTransaction()); navigate('/'); }}
             className="w-full bg-primary text-on-primary py-3 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
           >
             Volver al catalogo
@@ -85,13 +86,13 @@ export function TransactionResult() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
             <button
-              onClick={() => navigate('/checkout')}
+              onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
               className="flex-1 bg-surface text-primary border border-outline-variant py-3 rounded-lg font-semibold hover:bg-surface-container-low active:scale-95 transition-all"
             >
               Cambiar tarjeta
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => { dispatch(resetTransaction()); navigate('/'); }}
               className="flex-1 bg-primary text-on-primary py-3 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
             >
               Volver al catalogo
@@ -102,13 +103,18 @@ export function TransactionResult() {
 
       {paymentStatus === 'failed' && (
         <div className="flex flex-col items-center justify-center p-12 bg-surface border border-error/20 rounded-xl shadow-sm text-center max-w-md w-full">
-          <h1 className="text-3xl font-semibold text-on-surface mb-4">Error</h1>
-          <p className="text-on-surface-variant mb-8">{error}</p>
+          <div className="w-20 h-20 rounded-full bg-error/10 flex items-center justify-center mb-8">
+            <span className="text-error text-5xl">!</span>
+          </div>
+          <h1 className="text-2xl font-semibold text-on-surface mb-4">Error al procesar</h1>
+          <p className="text-on-surface-variant mb-8 max-w-xs">
+            No se pudo procesar el pago. Verifica los datos de la tarjeta e intenta nuevamente.
+          </p>
           <button
-            onClick={() => navigate('/')}
-            className="bg-primary text-on-primary py-3 px-8 rounded-lg font-semibold"
+            onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
+            className="bg-primary text-on-primary py-3 px-8 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
           >
-            Volver al catalogo
+            Intentar de nuevo
           </button>
         </div>
       )}

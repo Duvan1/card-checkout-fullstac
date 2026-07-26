@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { Backdrop } from '../../../shared/components/Backdrop';
-import { createTransaction } from '../store/transactionSlice';
+import { createTransaction, resetTransaction } from '../store/transactionSlice';
 import { maskCardNumber } from '../../../shared/utils/luhn';
 
 export function PaymentSummary() {
@@ -47,7 +47,7 @@ export function PaymentSummary() {
       <div className="p-6 border-b border-outline-variant flex justify-between items-center">
         <h1 className="text-xl font-semibold text-on-surface">Resumen de tu compra</h1>
         <button
-          onClick={() => navigate('/checkout')}
+          onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
           className="text-on-surface-variant hover:bg-surface-variant p-2 rounded-full transition-colors active:scale-95"
         >
           ✕
@@ -104,7 +104,7 @@ export function PaymentSummary() {
           {loading ? 'Creando transaccion...' : `🔒 Pagar ${product?.currency ?? 'COP'} ${total.toLocaleString()}`}
         </button>
         <button
-          onClick={() => navigate('/checkout')}
+          onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
           className="w-full py-3 bg-surface border border-outline-variant text-primary font-semibold rounded-xl
             hover:bg-surface-container-low active:scale-95 transition-all"
         >

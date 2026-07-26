@@ -84,8 +84,11 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
+      console.log('[Adapter] tokenizeCard body:', JSON.stringify({ number: input.number?.replace(/\d(?=\d{4})/g, '*'), cvc: '***', exp_month: input.expMonth, exp_year: input.expYear, card_holder: input.cardHolder }));
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.log('[Adapter] tokenizeCard error:', JSON.stringify(body));
         const reason = body.error?.reason ?? body.error?.type ?? 'Tokenization failed';
         return {
           ok: false,
@@ -141,17 +144,18 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
-      const body = await res.json();
+      const resBody = await res.json();
 
       if (!res.ok) {
-        const reason = body.error?.reason ?? body.error?.type ?? 'Unknown error';
+        this.logger.error(`Gateway error ${res.status}:`, JSON.stringify(resBody));
+        const reason = resBody.error?.reason ?? resBody.error?.type ?? 'Unknown error';
         return {
           ok: false,
-          error: new PaymentGatewayError(reason, body.error?.type ?? 'PAYMENT_ERROR', res.status),
+          error: new PaymentGatewayError(reason, resBody.error?.type ?? 'PAYMENT_ERROR', res.status),
         };
       }
 
-      const data = body.data;
+      const data = resBody.data;
 
       return {
         ok: true,
@@ -170,6 +174,26 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
           'NETWORK_ERROR',
           0,
         ),
+      };
+    }
+  }
+
+  async getTransactionStatus(
+    gatewayTransactionId: string,
+  ): Promise<{ ok: true; value: string } | { ok: false; error: PaymentGatewayError }> {
+    try {
+      const res = await fetch(`${this.baseUrl}/transactions/${gatewayTransactionId}`, {
+        headers: { Authorization: `Bearer ${this.publicKey}` },
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        return { ok: false, error: new PaymentGatewayError('Status check failed', 'STATUS_ERROR', res.status) };
+      }
+      return { ok: true, value: body.data.status as string };
+    } catch (err) {
+      return {
+        ok: false,
+        error: new PaymentGatewayError(err instanceof Error ? err.message : 'Network error', 'NETWORK_ERROR', 0),
       };
     }
   }

@@ -1,5 +1,6 @@
 import { ProcessPaymentUseCase, PaymentValidationError } from './process-payment.use-case';
 import type { TransactionRepository } from '../../domain/repositories/transaction-repository.port';
+import type { ProductRepository } from '../../domain/repositories/product-repository.port';
 import type { PaymentGatewayPort } from '../../domain/repositories/payment-gateway.port';
 import { PaymentGatewayError } from '../../domain/repositories/payment-gateway.port';
 import type { Transaction } from '../../domain/entities/transaction';
@@ -32,11 +33,13 @@ const validDto = {
   cardExpiryYear: '28',
   cardHolder: 'JUAN PEREZ',
   installments: 1,
+  customerEmail: 'juan@test.com',
 };
 
 describe('ProcessPaymentUseCase', () => {
   let useCase: ProcessPaymentUseCase;
   let transactionRepo: jest.Mocked<TransactionRepository>;
+  let productRepo: jest.Mocked<ProductRepository>;
   let paymentGateway: jest.Mocked<PaymentGatewayPort>;
 
   beforeEach(() => {
@@ -48,13 +51,20 @@ describe('ProcessPaymentUseCase', () => {
       updateStatus: jest.fn(),
     };
 
+    productRepo = {
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      decrementStock: jest.fn(),
+    };
+
     paymentGateway = {
       getAcceptanceTokens: jest.fn(),
       tokenizeCard: jest.fn(),
       processPayment: jest.fn(),
+      getTransactionStatus: jest.fn(),
     };
 
-    useCase = new ProcessPaymentUseCase(transactionRepo, paymentGateway);
+    useCase = new ProcessPaymentUseCase(transactionRepo, productRepo, paymentGateway);
   });
 
   afterEach(() => {
@@ -74,20 +84,18 @@ describe('ProcessPaymentUseCase', () => {
       });
       paymentGateway.processPayment.mockResolvedValue({
         ok: true,
-        value: { transactionId: 'gw-123', status: 'APPROVED', brand: 'VISA', lastFour: '4242' },
+        value: { transactionId: 'gw-123', status: 'PENDING', brand: 'VISA', lastFour: '4242' },
       });
-      transactionRepo.updateStatus.mockResolvedValue(mockTx('APPROVED'));
 
       const result = await useCase.execute(validDto);
 
       expect(result.ok).toBe(true);
-      if (result.ok) expect(result.value.status.toString()).toBe('APPROVED');
+      if (result.ok) expect(result.value.status.toString()).toBe('PENDING');
 
       expect(paymentGateway.getAcceptanceTokens).toHaveBeenCalledTimes(1);
       expect(paymentGateway.tokenizeCard).toHaveBeenCalledWith(
         expect.objectContaining({ number: '4242424242424242' }),
       );
-      expect(transactionRepo.updateStatus).toHaveBeenCalledWith('tx-test-1234-abcd', 'APPROVED');
     });
   });
 
@@ -121,6 +129,7 @@ describe('ProcessPaymentUseCase', () => {
       const result = await useCase.execute(validDto);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toBeInstanceOf(PaymentGatewayError);
+      expect(transactionRepo.updateStatus).toHaveBeenCalledWith('tx-test-1234-abcd', 'ERROR');
     });
 
     it('debería fallar si falla tokenizar tarjeta', async () => {
@@ -135,6 +144,7 @@ describe('ProcessPaymentUseCase', () => {
       const result = await useCase.execute(validDto);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toBeInstanceOf(PaymentGatewayError);
+      expect(transactionRepo.updateStatus).toHaveBeenCalledWith('tx-test-1234-abcd', 'ERROR');
     });
 
     it('debería propagar error del gateway al procesar pago', async () => {
@@ -155,6 +165,7 @@ describe('ProcessPaymentUseCase', () => {
         expect(result.error).toBeInstanceOf(PaymentGatewayError);
         expect(result.error.message).toContain('Fondos insuficientes');
       }
+      expect(transactionRepo.updateStatus).toHaveBeenCalledWith('tx-test-1234-abcd', 'DECLINED');
     });
   });
 });

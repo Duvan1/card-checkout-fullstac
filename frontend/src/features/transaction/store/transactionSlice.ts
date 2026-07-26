@@ -10,7 +10,7 @@ import {
 interface TransactionState {
   transaction: TransactionDto | null;
   paymentResult: PayTransactionResult | null;
-  paymentStatus: 'idle' | 'processing' | 'approved' | 'declined' | 'failed';
+  paymentStatus: 'idle' | 'processing' | 'pending' | 'approved' | 'declined' | 'failed';
   error: string | null;
 }
 
@@ -55,7 +55,8 @@ const transactionSlice = createSlice({
       })
       .addCase(processPayment.fulfilled, (state, action) => {
         state.paymentResult = action.payload;
-        state.paymentStatus = action.payload.status === 'APPROVED' ? 'approved' : 'declined';
+        const status = action.payload.status;
+        state.paymentStatus = status === 'APPROVED' ? 'approved' : status === 'DECLINED' ? 'declined' : 'pending';
       })
       .addCase(processPayment.rejected, (state, action) => {
         state.paymentStatus = 'failed';

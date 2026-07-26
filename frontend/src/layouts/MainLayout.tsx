@@ -1,15 +1,14 @@
 import { useEffect } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../shared/hooks';
 
 export function MainLayout() {
-  const location = useLocation();
   const navigate = useNavigate();
   const tx = useAppSelector((s) => s.transaction.transaction);
   const paymentStatus = useAppSelector((s) => s.transaction.paymentStatus);
 
   useEffect(() => {
-    if (tx && paymentStatus === 'idle' && !location.pathname.startsWith('/result')) {
+    if (tx && tx.status === 'PENDING' && paymentStatus === 'idle') {
       navigate('/result');
     }
   }, [tx, paymentStatus]);

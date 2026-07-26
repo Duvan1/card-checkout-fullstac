@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { PaymentGatewayPort } from '../../domain/repositories/payment-gateway.port';
 import {
   PaymentGatewayError,
@@ -7,6 +7,10 @@ import {
 } from '../../domain/repositories/payment-gateway.port';
 import { TRANSACTION_REPOSITORY } from '../../domain/repositories/transaction-repository.port';
 import type { TransactionRepository } from '../../domain/repositories/transaction-repository.port';
+import {
+  PRODUCT_REPOSITORY,
+} from '../../domain/repositories/product-repository.port';
+import type { ProductRepository } from '../../domain/repositories/product-repository.port';
 import type { Transaction } from '../../domain/entities/transaction';
 import type { TransactionStatus } from '../../domain/value-objects/transaction-status';
 import { Result, ok, err } from '../common/result';
@@ -26,13 +30,18 @@ export interface ProcessPaymentDto {
   cardExpiryYear: string;
   cardHolder: string;
   installments: number;
+  customerEmail: string;
 }
 
 @Injectable()
 export class ProcessPaymentUseCase {
+  private readonly logger = new Logger(ProcessPaymentUseCase.name);
+
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: TransactionRepository,
+    @Inject(PRODUCT_REPOSITORY)
+    private readonly productRepository: ProductRepository,
     @Inject(PAYMENT_GATEWAY_PORT)
     private readonly paymentGateway: PaymentGatewayPort,
   ) {}
@@ -55,7 +64,11 @@ export class ProcessPaymentUseCase {
       }
 
       const tokensResult = await this.paymentGateway.getAcceptanceTokens();
-      if (!tokensResult.ok) return tokensResult;
+      console.log('[ProcessPayment] tokensResult ok=%s', tokensResult.ok, tokensResult);
+      if (!tokensResult.ok) {
+        await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
+        return tokensResult;
+      }
 
       const cardResult = await this.paymentGateway.tokenizeCard({
         number: dto.cardNumber,
@@ -64,7 +77,11 @@ export class ProcessPaymentUseCase {
         expYear: dto.cardExpiryYear,
         cardHolder: dto.cardHolder,
       });
-      if (!cardResult.ok) return cardResult;
+      console.log('[ProcessPayment] cardResult ok=%s', cardResult.ok, cardResult);
+      if (!cardResult.ok) {
+        await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
+        return cardResult;
+      }
 
       const reference = `TX-${transaction.id.substring(0, 8)}`;
       const amountInCents = Math.round(transaction.totalAmount.amount * 100);
@@ -73,10 +90,12 @@ export class ProcessPaymentUseCase {
       const signatureString = `${reference}${amountInCents}COP${integritySecret}`;
       const signature = createHash('sha256').update(signatureString).digest('hex');
 
+      this.logger.log(`Paying: ref=${reference} amount=${amountInCents} cents sig=${signature.substring(0,10)}...`);
+
       const paymentResult = await this.paymentGateway.processPayment({
         amountInCents,
         currency: 'COP',
-        customerEmail: '',
+        customerEmail: dto.customerEmail,
         reference,
         cardToken: cardResult.value.token,
         installments: dto.installments,
@@ -85,18 +104,18 @@ export class ProcessPaymentUseCase {
         signature,
       });
 
-      if (!paymentResult.ok) return paymentResult;
+      console.log('[ProcessPayment] paymentResult:', JSON.stringify(paymentResult));
 
-      const newStatus: TransactionStatus =
-        paymentResult.value.status === 'APPROVED' ? 'APPROVED' : 'DECLINED';
+      if (!paymentResult.ok) {
+        await this.transactionRepository.updateStatus(transaction.id, 'DECLINED');
+        return paymentResult;
+      }
 
-      const updated = await this.transactionRepository.updateStatus(
-        transaction.id,
-        newStatus,
-      );
-
-      return ok(updated);
+      return ok(transaction);
     } catch (error) {
+      try {
+        await this.transactionRepository.updateStatus(dto.transactionId, 'ERROR');
+      } catch {}
       return err(
         error instanceof Error
           ? error

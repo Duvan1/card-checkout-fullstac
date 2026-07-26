@@ -158,6 +158,9 @@ model Product {
 | `GET` | `/api/health` | Health check | — |
 | `GET` | `/api/products` | Listar productos | `?search=&minPrice=&maxPrice=&sortBy=price&sortOrder=asc` |
 | `GET` | `/api/products/:id` | Producto por ID | — |
+| `POST` | `/api/transactions` | Crear transaccion PENDING | Body: `productId`, `quantity`, `customer`, `delivery` |
+| `GET` | `/api/transactions/:id` | Consultar transaccion | — |
+| `POST` | `/api/transactions/:id/pay` | Procesar pago | Body: `cardNumber`, `cardCvc`, `cardExpiryMonth`, `cardExpiryYear`, `cardHolder`, `installments`, `customerEmail` |
 | `GET` | `/` | Health check ALB (sin prefix) | — |
 
 ### Ejemplos
@@ -185,11 +188,11 @@ curl http://localhost:3000/api/health
 
 | | Backend | Frontend |
 |---|---|---|
-| **Statements** | 98.40% | 86.77% |
-| **Branches** | 87.37% | 73.33% |
-| **Functions** | 95.45% | 75.00% |
-| **Lines** | 98.23% | 88.88% |
-| **Tests** | 72 | 35 |
+| **Statements** | 96.57% | 86.17% |
+| **Branches** | 85.18% | 73.33% |
+| **Functions** | 95.00% | 75.00% |
+| **Lines** | 97.01% | 88.23% |
+| **Tests** | 91 | 35 |
 | **Runner** | Jest 30 | Jest 30 |
 
 > El pipeline de CI falla si el coverage baja de los thresholds configurados (backend: 80% global, frontend: 80/65/68/80).
@@ -344,11 +347,16 @@ El proyecto sigue principios SOLID y Clean Code. Una auditoria completa encontro
 ## Proximas Fases
 
 - [x] ~~Catalogo de productos (backend + frontend)~~
-- [x] ~~Value objects: Money, CardNumber~~
+- [x] ~~Value objects: Money, CardNumber, TransactionStatus~~
+- [x] ~~Filtros y busqueda (backend + frontend)~~
 - [x] ~~Formulario de tarjeta + direccion (frontend)~~
-- [ ] `POST /checkout` — Crear transaccion + procesar pago
-- [ ] `POST /webhooks/payment-events` — Recepcion de eventos del gateway
-- [ ] Backdrop de resumen de pago (frontend)
-- [ ] Pantalla de resultado de transaccion (frontend)
-- [ ] `redux-persist` con exclusion de datos de tarjeta
-- [ ] Prisma models: Transaction, Customer, Delivery
+- [x] ~~POST /transactions — Crear transaccion PENDING~~
+- [x] ~~POST /transactions/:id/pay — Procesar pago con gateway~~
+- [x] ~~Backdrop de resumen de pago (frontend)~~
+- [x] ~~Pantalla de resultado de transaccion (frontend)~~
+- [x] ~~redux-persist (checkout + transaction) con exclusion de datos de tarjeta~~
+- [x] ~~Prisma models: Transaction, Customer, Delivery~~
+- [ ] POST /webhooks/payment-events — Recepcion de eventos del gateway
+- [ ] Polling como fallback del webhook
+- [ ] Actualizar stock solo al confirmar pago (APPROVED)
+- [ ] Swagger / OpenAPI documentation

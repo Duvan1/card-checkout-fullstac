@@ -95,6 +95,7 @@ export class TransactionController {
       cardExpiryYear: body.cardExpiryYear as string,
       cardHolder: body.cardHolder as string,
       installments: (body.installments as number) ?? 1,
+      customerEmail: (body.customerEmail as string) ?? (body.email as string) ?? '',
     });
 
     if (!result.ok) {

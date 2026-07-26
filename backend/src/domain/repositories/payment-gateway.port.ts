@@ -59,6 +59,9 @@ export interface PaymentGatewayPort {
   processPayment(
     input: PaymentInput,
   ): Promise<{ ok: true; value: PaymentGatewayResult } | { ok: false; error: PaymentGatewayError }>;
+  getTransactionStatus(
+    gatewayTransactionId: string,
+  ): Promise<{ ok: true; value: string } | { ok: false; error: PaymentGatewayError }>;
 }
 
 export const PAYMENT_GATEWAY_PORT = 'PAYMENT_GATEWAY_PORT';
