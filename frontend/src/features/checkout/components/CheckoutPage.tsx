@@ -51,7 +51,7 @@ export function CheckoutPage() {
         cardBrand: detectBrand(data.cardNumber),
       }),
     );
-    navigate('/');
+    navigate('/summary');
   };
 
   return (

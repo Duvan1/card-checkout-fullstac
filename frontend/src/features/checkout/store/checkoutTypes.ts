@@ -1,6 +1,8 @@
 import type { CardBrand } from '../../../shared/utils/binDetect';
 
 export interface CheckoutState {
+  productId: string;
+  quantity: number;
   cardNumber: string;
   cardHolder: string;
   cardExpiry: string;
@@ -15,6 +17,8 @@ export interface CheckoutState {
 }
 
 export const initialCheckoutState: CheckoutState = {
+  productId: '',
+  quantity: 1,
   cardNumber: '',
   cardHolder: '',
   cardExpiry: '',

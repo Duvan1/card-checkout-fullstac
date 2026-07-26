@@ -3,24 +3,17 @@ import { MainLayout } from '../layouts/MainLayout';
 import { ProductList } from '../features/product/components/ProductList';
 import { ProductDetail } from '../features/product/components/ProductDetail';
 import { CheckoutPage } from '../features/checkout/components/CheckoutPage';
+import { PaymentSummary } from '../features/transaction/components/PaymentSummary';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <MainLayout />,
     children: [
-      {
-        index: true,
-        element: <ProductList />,
-      },
-      {
-        path: 'product/:id',
-        element: <ProductDetail />,
-      },
-      {
-        path: 'checkout',
-        element: <CheckoutPage />,
-      },
+      { index: true, element: <ProductList /> },
+      { path: 'product/:id', element: <ProductDetail /> },
+      { path: 'checkout', element: <CheckoutPage /> },
+      { path: 'summary', element: <PaymentSummary /> },
     ],
   },
 ]);
