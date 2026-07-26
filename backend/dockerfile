@@ -27,7 +27,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/prisma.config.ts ./
 
 EXPOSE 3000
 
-CMD ["sh","-c","npx prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh","-c","echo DATABASE_URL=$DATABASE_URL && npm run prisma:migrate && node dist/src/main.js"]
