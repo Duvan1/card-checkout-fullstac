@@ -27,16 +27,15 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Get Infrastructure Outputs
         run: |
           echo "Getting CloudFormation outputs..."
 
-          echo "ECR_REPOSITORY=$(aws cloudformation describe-stacks \
+          echo "ECR_REPOSITORY_URI=$(aws cloudformation describe-stacks \
             --stack-name InfraStack \
-            --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryName'].OutputValue" \
+            --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryUri'].OutputValue" \
             --output text)" >> $GITHUB_ENV
 
           echo "ECS_CLUSTER=$(aws cloudformation describe-stacks \
@@ -51,18 +50,14 @@ jobs:
 
       - name: Show Infrastructure
         run: |
-          echo "Repository: $ECR_REPOSITORY"
+          echo "Repository URI: $ECR_REPOSITORY_URI"
           echo "Cluster: $ECS_CLUSTER"
           echo "Service: $ECS_SERVICE"
 
       - name: Validate Infrastructure Outputs
         run: |
-          if [ -z "$ECR_REPOSITORY" ] || [ "$ECR_REPOSITORY" = "None" ]; then
-            echo "❌ ECR_REPOSITORY is empty"
-            echo "Available CloudFormation outputs:"
-            aws cloudformation describe-stacks \
-              --stack-name InfraStack \
-              --query "Stacks[0].Outputs"
+          if [ -z "$ECR_REPOSITORY_URI" ] || [ "$ECR_REPOSITORY_URI" = "None" ]; then
+            echo "❌ ECR_REPOSITORY_URI is empty"
             exit 1
           fi
 
@@ -78,34 +73,25 @@ jobs:
 
           echo "✅ Infrastructure outputs validated"
 
-      - name: Debug ECR variables
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          echo "REGISTRY=$ECR_REGISTRY"
-          echo "REPOSITORY=$ECR_REPOSITORY"
-          echo "IMAGE_TAG=${{ github.sha }}"
-
       - name: Build, tag and push Docker image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cd backend
 
           echo "Building image:"
-          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "$ECR_REPOSITORY_URI:$IMAGE_TAG"
 
           docker build \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REPOSITORY_URI:$IMAGE_TAG \
             .
 
           docker build \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REPOSITORY_URI:latest \
             .
 
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+          docker push $ECR_REPOSITORY_URI:latest
 
       - name: Force ECS Redeployment
         run: |
