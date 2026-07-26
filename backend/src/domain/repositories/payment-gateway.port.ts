@@ -9,6 +9,25 @@ export class PaymentGatewayError extends Error {
   }
 }
 
+export interface CardTokenInput {
+  number: string;
+  cvc: string;
+  expMonth: string;
+  expYear: string;
+  cardHolder: string;
+}
+
+export interface CardTokenResult {
+  token: string;
+  brand: string;
+  lastFour: string;
+}
+
+export interface AcceptanceTokens {
+  acceptanceToken: string;
+  acceptPersonalAuth: string;
+}
+
 export interface PaymentInput {
   amountInCents: number;
   currency: string;
@@ -29,6 +48,14 @@ export interface PaymentGatewayResult {
 }
 
 export interface PaymentGatewayPort {
+  getAcceptanceTokens(): Promise<
+    { ok: true; value: AcceptanceTokens } | { ok: false; error: PaymentGatewayError }
+  >;
+  tokenizeCard(
+    input: CardTokenInput,
+  ): Promise<
+    { ok: true; value: CardTokenResult } | { ok: false; error: PaymentGatewayError }
+  >;
   processPayment(
     input: PaymentInput,
   ): Promise<{ ok: true; value: PaymentGatewayResult } | { ok: false; error: PaymentGatewayError }>;

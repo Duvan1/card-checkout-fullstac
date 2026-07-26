@@ -3,30 +3,11 @@ import {
   type PaymentGatewayPort,
   type PaymentInput,
   type PaymentGatewayResult,
+  type AcceptanceTokens,
+  type CardTokenInput,
+  type CardTokenResult,
   PaymentGatewayError,
 } from '../../domain/repositories/payment-gateway.port';
-
-interface GatewayApiResponse {
-  data: {
-    id: string;
-    status: string;
-    payment_method: {
-      type: string;
-      extra: {
-        brand: string;
-        last_four: string;
-      };
-    };
-  };
-}
-
-interface GatewayApiError {
-  error: {
-    type: string;
-    reason?: string;
-    messages?: Record<string, string[]>;
-  };
-}
 
 @Injectable()
 export class PaymentGatewayAdapter implements PaymentGatewayPort {
@@ -46,11 +27,99 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
     }
   }
 
+  async getAcceptanceTokens(): Promise<
+    { ok: true; value: AcceptanceTokens } | { ok: false; error: PaymentGatewayError }
+  > {
+    try {
+      const res = await fetch(`${this.baseUrl}/merchants/${this.publicKey}`);
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: new PaymentGatewayError(
+            'Failed to get acceptance tokens',
+            'ACCEPTANCE_TOKEN_ERROR',
+            res.status,
+          ),
+        };
+      }
+
+      const body = await res.json();
+      return {
+        ok: true,
+        value: {
+          acceptanceToken: body.data.presigned_acceptance.acceptance_token,
+          acceptPersonalAuth: body.data.presigned_personal_data_auth.acceptance_token,
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: new PaymentGatewayError(
+          err instanceof Error ? err.message : 'Network error',
+          'NETWORK_ERROR',
+          0,
+        ),
+      };
+    }
+  }
+
+  async tokenizeCard(
+    input: CardTokenInput,
+  ): Promise<{ ok: true; value: CardTokenResult } | { ok: false; error: PaymentGatewayError }> {
+    try {
+      const res = await fetch(`${this.baseUrl}/tokens/cards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.publicKey}`,
+        },
+        body: JSON.stringify({
+          number: input.number,
+          cvc: input.cvc,
+          exp_month: input.expMonth,
+          exp_year: input.expYear,
+          card_holder: input.cardHolder,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const reason = body.error?.reason ?? body.error?.type ?? 'Tokenization failed';
+        return {
+          ok: false,
+          error: new PaymentGatewayError(reason, 'TOKENIZATION_ERROR', res.status),
+        };
+      }
+
+      const body = await res.json();
+
+      return {
+        ok: true,
+        value: {
+          token: body.data.id,
+          brand: body.data.brand ?? 'UNKNOWN',
+          lastFour: body.data.last_four ?? '****',
+        },
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: new PaymentGatewayError(
+          err instanceof Error ? err.message : 'Network error',
+          'NETWORK_ERROR',
+          0,
+        ),
+      };
+    }
+  }
+
   async processPayment(
     input: PaymentInput,
   ): Promise<{ ok: true; value: PaymentGatewayResult } | { ok: false; error: PaymentGatewayError }> {
     try {
-      const response = await fetch(`${this.baseUrl}/transactions`, {
+      const res = await fetch(`${this.baseUrl}/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,33 +141,35 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
-      const body = (await response.json()) as GatewayApiResponse | GatewayApiError;
+      const body = await res.json();
 
-      if (!response.ok) {
-        const error = body as GatewayApiError;
-        const reason = error.error.reason ?? error.error.type ?? 'Unknown error';
+      if (!res.ok) {
+        const reason = body.error?.reason ?? body.error?.type ?? 'Unknown error';
         return {
           ok: false,
-          error: new PaymentGatewayError(reason, error.error.type, response.status),
+          error: new PaymentGatewayError(reason, body.error?.type ?? 'PAYMENT_ERROR', res.status),
         };
       }
 
-      const data = (body as GatewayApiResponse).data;
+      const data = body.data;
 
       return {
         ok: true,
         value: {
           transactionId: data.id,
           status: data.status,
-          brand: data.payment_method.extra?.brand ?? 'UNKNOWN',
-          lastFour: data.payment_method.extra?.last_four ?? '****',
+          brand: data.payment_method?.extra?.brand ?? 'UNKNOWN',
+          lastFour: data.payment_method?.extra?.last_four ?? '****',
         },
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Network error';
       return {
         ok: false,
-        error: new PaymentGatewayError(message, 'NETWORK_ERROR', 0),
+        error: new PaymentGatewayError(
+          err instanceof Error ? err.message : 'Network error',
+          'NETWORK_ERROR',
+          0,
+        ),
       };
     }
   }
