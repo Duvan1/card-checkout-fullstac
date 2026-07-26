@@ -11,6 +11,7 @@ export class Transaction {
     readonly deliveryFee: Money,
     readonly totalAmount: Money,
     readonly cardMasked: string | null,
+    readonly gatewayReference: string | null,
     readonly productId: string,
     readonly createdAt: Date,
   ) {}
@@ -41,6 +42,35 @@ export class Transaction {
       params.deliveryFee,
       total,
       params.cardMasked ?? null,
+      null,
+      params.productId,
+      params.createdAt ?? new Date(),
+    );
+  }
+
+  static reconstitute(params: {
+    id: string;
+    status: string;
+    quantity: number;
+    productPrice: Money;
+    baseFee: Money;
+    deliveryFee: Money;
+    productId: string;
+    cardMasked?: string | null;
+    gatewayReference?: string | null;
+    createdAt?: Date;
+  }): Transaction {
+    const total = params.productPrice.add(params.baseFee).add(params.deliveryFee);
+    return new Transaction(
+      params.id,
+      TransactionStatusValue.create(params.status),
+      params.quantity,
+      params.productPrice,
+      params.baseFee,
+      params.deliveryFee,
+      total,
+      params.cardMasked ?? null,
+      params.gatewayReference ?? null,
       params.productId,
       params.createdAt ?? new Date(),
     );

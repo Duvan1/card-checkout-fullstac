@@ -20,20 +20,21 @@ model Product {
 }
 
 model Transaction {
-  id             String    @id @default(uuid())
-  status         String    @default("PENDING")
-  quantity       Int
-  productPrice   Float
-  baseFee        Float
-  deliveryFee    Float
-  totalAmount    Float
-  cardMasked     String?
-  productId      String
-  product        Product   @relation(fields: [productId], references: [id])
-  customer       Customer?
-  delivery       Delivery?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  status            String    @default("PENDING")
+  quantity          Int
+  productPrice      Float
+  baseFee           Float
+  deliveryFee       Float
+  totalAmount       Float
+  cardMasked        String?
+  gatewayReference  String?
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id])
+  customer          Customer?
+  delivery          Delivery?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@map("transactions")
 }

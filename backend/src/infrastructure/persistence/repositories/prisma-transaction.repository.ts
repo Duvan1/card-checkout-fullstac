@@ -40,7 +40,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
       include: { customer: true, delivery: true },
     });
 
-    return this.toDomain(row);
+    return this.toDomain(row as any);
   }
 
   async findById(id: string): Promise<Transaction | null> {
@@ -60,7 +60,23 @@ export class PrismaTransactionRepository implements TransactionRepository {
       include: { customer: true, delivery: true },
     });
 
+    return this.toDomain(row as any);
+  }
+
+  async findByGatewayReference(ref: string): Promise<Transaction | null> {
+    const row = await this.prisma.transaction.findFirst({
+      where: { gatewayReference: ref },
+      include: { customer: true, delivery: true },
+    });
+    if (!row) return null;
     return this.toDomain(row);
+  }
+
+  async saveGatewayReference(id: string, ref: string): Promise<void> {
+    await this.prisma.transaction.update({
+      where: { id },
+      data: { gatewayReference: ref },
+    });
   }
 
   private toDomain(row: {
@@ -72,6 +88,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     deliveryFee: number;
     totalAmount: number;
     cardMasked: string | null;
+    gatewayReference: string | null;
     productId: string;
     createdAt: Date;
   }): Transaction {
@@ -79,14 +96,16 @@ export class PrismaTransactionRepository implements TransactionRepository {
     const baseFee = Money.create(row.baseFee);
     const deliveryFee = Money.create(row.deliveryFee);
 
-    const transaction = Transaction.create({
+    const transaction = Transaction.reconstitute({
       id: row.id,
+      status: row.status,
       quantity: row.quantity,
       productPrice,
       baseFee,
       deliveryFee,
       productId: row.productId,
-      cardMasked: row.cardMasked ?? undefined,
+      cardMasked: row.cardMasked,
+      gatewayReference: row.gatewayReference,
       createdAt: row.createdAt,
     });
 

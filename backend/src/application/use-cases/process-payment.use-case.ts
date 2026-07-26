@@ -111,6 +111,11 @@ export class ProcessPaymentUseCase {
         return paymentResult;
       }
 
+      await this.transactionRepository.saveGatewayReference(
+        transaction.id,
+        paymentResult.value.transactionId,
+      );
+
       return ok(transaction);
     } catch (error) {
       try {

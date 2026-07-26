@@ -56,6 +56,8 @@ describe('CreateTransactionUseCase', () => {
       create: jest.fn(),
       findById: jest.fn(),
       updateStatus: jest.fn(),
+      findByGatewayReference: jest.fn(),
+      saveGatewayReference: jest.fn(),
     };
     useCase = new CreateTransactionUseCase(productRepo, transactionRepo);
   });

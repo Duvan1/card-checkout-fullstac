@@ -49,6 +49,8 @@ describe('ProcessPaymentUseCase', () => {
       create: jest.fn(),
       findById: jest.fn(),
       updateStatus: jest.fn(),
+      findByGatewayReference: jest.fn(),
+      saveGatewayReference: jest.fn(),
     };
 
     productRepo = {

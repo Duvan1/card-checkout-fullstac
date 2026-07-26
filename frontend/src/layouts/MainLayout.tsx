@@ -1,17 +1,25 @@
 import { useEffect } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { useAppSelector } from '../shared/hooks';
+import { useAppDispatch, useAppSelector } from '../shared/hooks';
+import { fetchTransactionStatus } from '../features/transaction/store/transactionSlice';
 
 export function MainLayout() {
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const tx = useAppSelector((s) => s.transaction.transaction);
   const paymentStatus = useAppSelector((s) => s.transaction.paymentStatus);
 
   useEffect(() => {
     if (tx && tx.status === 'PENDING' && paymentStatus === 'idle') {
+      dispatch(fetchTransactionStatus(tx.id));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tx && tx.status === 'PENDING' && paymentStatus === 'idle') {
       navigate('/result');
     }
-  }, [tx, paymentStatus]);
+  }, [tx?.id, paymentStatus]);
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
-import { processPayment, resetTransaction } from '../store/transactionSlice';
+import { processPayment, resetTransaction, fetchTransactionStatus } from '../store/transactionSlice';
 
 export function TransactionResult() {
   const navigate = useNavigate();
@@ -27,6 +27,14 @@ export function TransactionResult() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!transaction || paymentStatus !== 'pending') return;
+    const interval = setInterval(() => {
+      dispatch(fetchTransactionStatus(transaction.id));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [transaction?.id, paymentStatus]);
 
   const total = transaction?.totalAmount ?? 0;
   const currency = transaction?.currency ?? 'COP';
