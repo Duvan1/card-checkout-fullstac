@@ -4,7 +4,7 @@ services:
     container_name: card_checkout_db_local
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_PASSWORD: admin
       POSTGRES_DB: card_checkout
     ports:
       - '5432:5432'

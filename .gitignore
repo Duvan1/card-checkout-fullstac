@@ -5,5 +5,5 @@ dist/
 .env.*.local
 
 # AI / SDD artifacts
-.atl/
+.atl/*
 .opencode/
