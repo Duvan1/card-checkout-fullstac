@@ -19,9 +19,9 @@ jest.mock('../api/productService', () => ({
 function makeProduct(overrides: Partial<ProductDto> = {}): ProductDto {
   return {
     id: 'prod-1',
-    name: 'Test Product',
-    description: 'A great product',
-    price: 50000,
+    name: 'Chaqueta de Cueros',
+    description: 'Elegancia y durabilidad en una sola pieza.',
+    price: 150000,
     currency: 'COP',
     stock: 10,
     createdAt: new Date().toISOString(),
@@ -31,10 +31,7 @@ function makeProduct(overrides: Partial<ProductDto> = {}): ProductDto {
 }
 
 function renderDetail(id = 'prod-1') {
-  const store = configureStore({
-    reducer: { product: productReducer },
-  });
-
+  const store = configureStore({ reducer: { product: productReducer } });
   return {
     store,
     ...render(
@@ -54,76 +51,81 @@ describe('ProductDetail', () => {
     jest.clearAllMocks();
   });
 
-  it('should show loading state initially', () => {
-    jest.mocked(productService.getProductById).mockReturnValue(
-      new Promise(() => {}),
-    );
+  it('debería mostrar estado de carga inicialmente', () => {
+    jest.mocked(productService.getProductById).mockReturnValue(new Promise(() => {}));
     renderDetail();
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText('Cargando...')).toBeInTheDocument();
   });
 
-  it('should render product detail on success', async () => {
-    const product = makeProduct({ id: 'prod-99', name: 'Single Product', stock: 5 });
+  it('debería renderizar el detalle del producto', async () => {
+    const product = makeProduct({ name: 'Chaqueta Premium', stock: 10 });
     jest.mocked(productService.getProductById).mockResolvedValue(product);
-
-    renderDetail('prod-99');
-
-    expect(await screen.findByText('Single Product')).toBeInTheDocument();
-    expect(screen.getByText('COP 50,000')).toBeInTheDocument();
-    expect(screen.getByText('5 disponibles')).toBeInTheDocument();
-  });
-
-  it('should show pay button on detail view', async () => {
-    const product = makeProduct({ id: '1', stock: 5 });
-    jest.mocked(productService.getProductById).mockResolvedValue(product);
-
     renderDetail();
 
-    expect(await screen.findByRole('button', {
-      name: 'Pay with credit card',
-    })).toBeInTheDocument();
+    expect(await screen.findByText('Chaqueta Premium')).toBeInTheDocument();
+    expect(screen.getByText('Proceder al Pago')).toBeInTheDocument();
   });
 
-  it('should disable pay button when stock is zero', async () => {
-    const product = makeProduct({ id: '1', stock: 0 });
+  it('debería mostrar el precio formateado', async () => {
+    const product = makeProduct({ price: 150000 });
     jest.mocked(productService.getProductById).mockResolvedValue(product);
-
     renderDetail();
 
-    const button = await screen.findByRole('button', {
-      name: 'Pay with credit card',
+    expect(await screen.findByText(/COP 150,000/)).toBeInTheDocument();
+  });
+
+  it('debería mostrar precio total con cantidad > 1', async () => {
+    const product = makeProduct({ price: 150000, stock: 5 });
+    jest.mocked(productService.getProductById).mockResolvedValue(product);
+    renderDetail();
+
+    await screen.findByText('Chaqueta de Cueros');
+
+    const buttons = screen.getAllByRole('button');
+    const addBtn = buttons.find((b) =>
+      b.querySelector('[d="M12 5v14m7-7H5"]'),
+    )!;
+    await userEvent.click(addBtn);
+
+    expect(screen.getByText(/COP 300,000/)).toBeInTheDocument();
+  });
+
+  it('debería mostrar badge de stock bajo', async () => {
+    const product = makeProduct({ stock: 3 });
+    jest.mocked(productService.getProductById).mockResolvedValue(product);
+    renderDetail();
+
+    expect(await screen.findByText(/Solo quedan 3!/)).toBeInTheDocument();
+  });
+
+  it('debería deshabilitar botón si no hay stock', async () => {
+    const product = makeProduct({ stock: 0 });
+    jest.mocked(productService.getProductById).mockResolvedValue(product);
+    renderDetail();
+
+    const btn = await screen.findByRole('button', {
+      name: /Proceder al Pago/,
     });
-    expect(button).toBeDisabled();
+    expect(btn).toBeDisabled();
   });
 
-  it('should show back button to product list', async () => {
+  it('debería mostrar stepper de progreso', async () => {
     const product = makeProduct();
     jest.mocked(productService.getProductById).mockResolvedValue(product);
-
     renderDetail();
 
-    expect(await screen.findByText('← Back to products')).toBeInTheDocument();
+    expect(await screen.findByText('Producto')).toBeInTheDocument();
+    expect(screen.getByText('Pago')).toBeInTheDocument();
+    expect(screen.getByText('Confirmado')).toBeInTheDocument();
   });
 
-  it('should navigate to checkout on pay button click', async () => {
-    const product = makeProduct({ id: '1', stock: 5 });
+  it('debería mostrar sección de features', async () => {
+    const product = makeProduct();
     jest.mocked(productService.getProductById).mockResolvedValue(product);
-
     renderDetail();
 
-    const button = await screen.findByRole('button', {
-      name: 'Pay with credit card',
-    });
-    await userEvent.click(button);
-  });
-
-  it('should show "Product not found" when product does not exist', async () => {
-    jest.mocked(productService.getProductById).mockRejectedValue(
-      new Error('Not found'),
-    );
-
-    renderDetail('nonexistent');
-
-    expect(await screen.findByText('Error')).toBeInTheDocument();
+    expect(await screen.findByText('Calidad Premium')).toBeInTheDocument();
+    expect(screen.getByText('Envío Rápido')).toBeInTheDocument();
+    expect(screen.getByText('Devolución Gratis')).toBeInTheDocument();
   });
 });
