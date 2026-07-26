@@ -8,6 +8,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'; // 👈 1. Nueva importación
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -23,7 +24,20 @@ export class InfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, 
       autoDeleteImages: true,
     });
- 
+
+    // 👈 2. Secreto para la pasarela de pagos
+    const paymentSecrets = new secretsmanager.Secret(this, 'PaymentGatewaySecrets', {
+      secretName: 'card-checkout/payment-gateway',
+      description: 'Llaves privadas y secreto de eventos para la pasarela de pagos',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          PAYMENT_GATEWAY_PRIVATE_KEY: 'prv_test_dummy_key',
+          PAYMENT_GATEWAY_EVENTS_SECRET: 'evt_test_dummy_secret',
+        }),
+        generateStringKey: 'dummy_key',
+      },
+    });
+
     const postgresDb = new rds.DatabaseInstance(this, 'PostgresDatabase', {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_16,
@@ -65,27 +79,28 @@ export class InfraStack extends cdk.Stack {
           DB_USER: 'postgres',
         },
         secrets: {
-          
           DB_PASSWORD: ecs.Secret.fromSecretsManager(postgresDb.secret!, 'password'),
+          // 👈 3. Inyección de secretos de la pasarela
+          PAYMENT_GATEWAY_PRIVATE_KEY: ecs.Secret.fromSecretsManager(paymentSecrets, 'PAYMENT_GATEWAY_PRIVATE_KEY'),
+          PAYMENT_GATEWAY_EVENTS_SECRET: ecs.Secret.fromSecretsManager(paymentSecrets, 'PAYMENT_GATEWAY_EVENTS_SECRET'),
         },
       },
       publicLoadBalancer: true, 
     });
 
     postgresDb.connections.allowDefaultPortFrom(fargateService.service);
- 
+
     new cdk.CfnOutput(this, 'BackendUrl', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
       description: 'URL pública del Backend en AWS ECS',
     });
 
     const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Mantiene el bucket completamente privado
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
 
-    // 7. Distribución de CloudFront (CDN)
     const frontendDistribution = new cloudfront.Distribution(this, 'FrontendDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket),
@@ -126,6 +141,6 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'FrontendDistributionId', {
       value: frontendDistribution.distributionId,
       description: 'ID de la distribución de CloudFront',
-    });    
+    });     
   }
 }
