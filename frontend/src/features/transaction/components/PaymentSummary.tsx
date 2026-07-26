@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { Backdrop } from '../../../shared/components/Backdrop';
-import { createTransaction } from '../store/transactionSlice';
+import { createTransaction, resetTransaction } from '../store/transactionSlice';
 import { maskCardNumber } from '../../../shared/utils/luhn';
 
 export function PaymentSummary() {
@@ -20,7 +20,7 @@ export function PaymentSummary() {
   const handlePay = async () => {
     if (!product) return;
 
-    dispatch(
+    await dispatch(
       createTransaction({
         productId: product.id,
         quantity,
@@ -35,15 +35,19 @@ export function PaymentSummary() {
           city: checkout.city,
         },
       }),
-    );
+    ).unwrap();
+
+    navigate('/result');
   };
+
+  const loading = !!tx.transaction || tx.error !== null;
 
   return (
     <Backdrop open>
       <div className="p-6 border-b border-outline-variant flex justify-between items-center">
         <h1 className="text-xl font-semibold text-on-surface">Resumen de tu compra</h1>
         <button
-          onClick={() => navigate('/checkout')}
+          onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
           className="text-on-surface-variant hover:bg-surface-variant p-2 rounded-full transition-colors active:scale-95"
         >
           ✕
@@ -85,17 +89,22 @@ export function PaymentSummary() {
       </div>
 
       <div className="p-6 bg-surface-container-lowest flex flex-col gap-3">
+        {tx.error && (
+          <div className="bg-error/10 text-error text-sm font-semibold p-3 rounded-lg text-center">
+            {tx.error}
+          </div>
+        )}
         <button
           onClick={handlePay}
-          disabled={tx.status === 'loading'}
+          disabled={loading}
           className="w-full py-3 bg-primary text-on-primary font-semibold rounded-xl shadow-sm
             hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          🔒 Pagar {product?.currency ?? 'COP'} {total.toLocaleString()}
+          {loading ? 'Creando transaccion...' : `🔒 Pagar ${product?.currency ?? 'COP'} ${total.toLocaleString()}`}
         </button>
         <button
-          onClick={() => navigate('/checkout')}
+          onClick={() => { dispatch(resetTransaction()); navigate('/checkout'); }}
           className="w-full py-3 bg-surface border border-outline-variant text-primary font-semibold rounded-xl
             hover:bg-surface-container-low active:scale-95 transition-all"
         >

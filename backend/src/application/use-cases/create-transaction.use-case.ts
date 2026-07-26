@@ -65,14 +65,6 @@ export class CreateTransactionUseCase {
         return err(new ValidationError('Product not found'));
       }
 
-      try {
-        await this.productRepository.decrementStock(dto.productId, dto.quantity);
-      } catch (error) {
-        return err(
-          new InsufficientStockError(product.stock, dto.quantity),
-        );
-      }
-
       const data: CreateTransactionData = {
         id: crypto.randomUUID(),
         quantity: dto.quantity,
