@@ -48,6 +48,8 @@ export function CheckoutPage() {
         phone: data.phone,
         cardHolder: data.cardHolder,
         cardExpiry: data.cardExpiry,
+        cardNumber: data.cardNumber,
+        cardCvv: data.cardCvv,
         cardBrand: detectBrand(data.cardNumber),
       }),
     );

@@ -21,7 +21,26 @@ export interface TransactionDto {
   createdAt: string;
 }
 
+export interface PayTransactionPayload {
+  cardNumber: string;
+  cardCvc: string;
+  cardExpiryMonth: string;
+  cardExpiryYear: string;
+  cardHolder: string;
+  installments: number;
+}
+
+export interface PayTransactionResult {
+  id: string;
+  status: string;
+  totalAmount: number;
+  currency: string;
+}
+
 export const transactionService = {
   create: (payload: CreateTransactionPayload) =>
     apiClient.post<TransactionDto>('/transactions', payload).then((r) => r.data),
+
+  pay: (id: string, payload: PayTransactionPayload) =>
+    apiClient.post<PayTransactionResult>(`/transactions/${id}/pay`, payload).then((r) => r.data),
 };

@@ -19,12 +19,17 @@ import {
   PaymentValidationError,
 } from '../../../application/use-cases/process-payment.use-case';
 import { PaymentGatewayError } from '../../../domain/repositories/payment-gateway.port';
+import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction-repository.port';
+import type { TransactionRepository } from '../../../domain/repositories/transaction-repository.port';
+import { Inject } from '@nestjs/common';
 
 @Controller('transactions')
 export class TransactionController {
   constructor(
     private readonly createTransactionUseCase: CreateTransactionUseCase,
     private readonly processPaymentUseCase: ProcessPaymentUseCase,
+    @Inject(TRANSACTION_REPOSITORY)
+    private readonly transactionRepo: TransactionRepository,
   ) {}
 
   @Post()
@@ -58,6 +63,25 @@ export class TransactionController {
       productPrice: result.value.productPrice.amount,
       cardMasked: result.value.cardMasked,
       createdAt: result.value.createdAt,
+    };
+  }
+
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    const tx = await this.transactionRepo.findById(id);
+    if (!tx) throw new NotFoundException('Transaction not found');
+
+    return {
+      id: tx.id,
+      status: tx.status.toString(),
+      quantity: tx.quantity,
+      totalAmount: tx.totalAmount.amount,
+      currency: tx.totalAmount.currency,
+      baseFee: tx.baseFee.amount,
+      deliveryFee: tx.deliveryFee.amount,
+      productPrice: tx.productPrice.amount,
+      cardMasked: tx.cardMasked,
+      createdAt: tx.createdAt,
     };
   }
 

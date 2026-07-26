@@ -4,6 +4,7 @@ import { ProductList } from '../features/product/components/ProductList';
 import { ProductDetail } from '../features/product/components/ProductDetail';
 import { CheckoutPage } from '../features/checkout/components/CheckoutPage';
 import { PaymentSummary } from '../features/transaction/components/PaymentSummary';
+import { TransactionResult } from '../features/transaction/components/TransactionResult';
 
 export const router = createBrowserRouter([
   {
@@ -14,6 +15,7 @@ export const router = createBrowserRouter([
       { path: 'product/:id', element: <ProductDetail /> },
       { path: 'checkout', element: <CheckoutPage /> },
       { path: 'summary', element: <PaymentSummary /> },
+      { path: 'result', element: <TransactionResult /> },
     ],
   },
 ]);

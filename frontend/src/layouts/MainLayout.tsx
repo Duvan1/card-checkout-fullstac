@@ -1,6 +1,19 @@
-import { Link, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAppSelector } from '../shared/hooks';
 
 export function MainLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tx = useAppSelector((s) => s.transaction.transaction);
+  const paymentStatus = useAppSelector((s) => s.transaction.paymentStatus);
+
+  useEffect(() => {
+    if (tx && paymentStatus === 'idle' && !location.pathname.startsWith('/result')) {
+      navigate('/result');
+    }
+  }, [tx, paymentStatus]);
+
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       <header className="bg-white border-b border-outline-variant sticky top-0 z-10">

@@ -20,7 +20,7 @@ export function PaymentSummary() {
   const handlePay = async () => {
     if (!product) return;
 
-    dispatch(
+    await dispatch(
       createTransaction({
         productId: product.id,
         quantity,
@@ -35,8 +35,12 @@ export function PaymentSummary() {
           city: checkout.city,
         },
       }),
-    );
+    ).unwrap();
+
+    navigate('/result');
   };
+
+  const loading = !!tx.transaction || tx.error !== null;
 
   return (
     <Backdrop open>
@@ -85,14 +89,19 @@ export function PaymentSummary() {
       </div>
 
       <div className="p-6 bg-surface-container-lowest flex flex-col gap-3">
+        {tx.error && (
+          <div className="bg-error/10 text-error text-sm font-semibold p-3 rounded-lg text-center">
+            {tx.error}
+          </div>
+        )}
         <button
           onClick={handlePay}
-          disabled={tx.status === 'loading'}
+          disabled={loading}
           className="w-full py-3 bg-primary text-on-primary font-semibold rounded-xl shadow-sm
             hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          🔒 Pagar {product?.currency ?? 'COP'} {total.toLocaleString()}
+          {loading ? 'Creando transaccion...' : `🔒 Pagar ${product?.currency ?? 'COP'} ${total.toLocaleString()}`}
         </button>
         <button
           onClick={() => navigate('/checkout')}
