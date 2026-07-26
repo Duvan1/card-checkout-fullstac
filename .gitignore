@@ -40,6 +40,13 @@ eslintcache
 .cache/
 .tsbuildinfo
 
+# Coverage y Tests
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/migrations/
+
 /.atl/
 .atl/
 .opencode/
