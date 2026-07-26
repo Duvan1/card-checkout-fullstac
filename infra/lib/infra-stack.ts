@@ -290,5 +290,13 @@ export class InfraStack extends cdk.Stack {
           `https://${frontendDistribution.distributionDomainName}`,
       }
     );
+
+    new cdk.CfnOutput(this, 'FrontendBucketName', {
+      value: frontendBucket.bucketName,
+    });
+
+    new cdk.CfnOutput(this, 'FrontendDistributionId', {
+      value: frontendDistribution.distributionId,
+    });
   }
 }
