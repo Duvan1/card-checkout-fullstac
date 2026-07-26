@@ -10,13 +10,20 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString =
+      process.env.DATABASE_URL ??
+      `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
 
     if (!connectionString) {
-      throw new Error('DATABASE_URL is not defined in environment variables');
+      throw new Error(
+        'Database connection string is not defined in environment variables'
+      );
     }
 
-    const pool = new Pool({ connectionString });
+    const pool = new Pool({
+      connectionString,
+    });
+
     const adapter = new PrismaPg(pool);
 
     super({ adapter });
