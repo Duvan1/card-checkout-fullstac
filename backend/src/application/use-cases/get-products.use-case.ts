@@ -20,7 +20,7 @@ export class GetProductsUseCase {
       return ok(products);
     } catch (error) {
       return err(
-        error instanceof Error ? error : new Error('Failed to fetch products'),
+        error instanceof Error ? error : new Error('Failed to fetch products', { cause: error }),
       );
     }
   }

@@ -54,6 +54,10 @@ export class CardNumber {
   }
 }
 
+/**
+ * Luhn checksum validation.
+ * @see frontend/src/shared/utils/luhn.ts — keep in sync
+ */
 function luhnCheck(cardNumber: string): boolean {
   let sum = 0;
   let alternate = false;
@@ -71,6 +75,10 @@ function luhnCheck(cardNumber: string): boolean {
   return sum % 10 === 0;
 }
 
+/**
+ * Detecta marca por prefijo BIN.
+ * @see frontend/src/shared/utils/binDetect.ts — keep in sync
+ */
 function detectBrand(cardNumber: string): CardBrand {
   if (/^4/.test(cardNumber)) return 'visa';
   if (/^5[1-5]/.test(cardNumber)) return 'mastercard';

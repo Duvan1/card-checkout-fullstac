@@ -1,3 +1,7 @@
+/**
+ * Luhn checksum validation.
+ * @see backend/src/domain/value-objects/card-number.ts — keep in sync
+ */
 export function luhnCheck(cardNumber: string): boolean {
   const digits = cardNumber.replace(/\s+/g, '');
   if (!/^\d+$/.test(digits)) return false;

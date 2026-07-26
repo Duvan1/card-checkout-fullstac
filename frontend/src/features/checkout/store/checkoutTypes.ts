@@ -1,9 +1,11 @@
+import type { CardBrand } from '../../../shared/utils/binDetect';
+
 export interface CheckoutState {
   cardNumber: string;
   cardHolder: string;
   cardExpiry: string;
   cardCvv: string;
-  cardBrand: 'visa' | 'mastercard' | 'unknown' | null;
+  cardBrand: CardBrand | null;
   email: string;
   fullName: string;
   address: string;
