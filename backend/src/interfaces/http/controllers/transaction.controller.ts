@@ -1,20 +1,30 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
+  Param,
   BadRequestException,
+  NotFoundException,
   InternalServerErrorException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
   CreateTransactionUseCase,
   ValidationError,
   InsufficientStockError,
 } from '../../../application/use-cases/create-transaction.use-case';
+import {
+  ProcessPaymentUseCase,
+  PaymentValidationError,
+} from '../../../application/use-cases/process-payment.use-case';
+import { PaymentGatewayError } from '../../../domain/repositories/payment-gateway.port';
 
 @Controller('transactions')
 export class TransactionController {
   constructor(
     private readonly createTransactionUseCase: CreateTransactionUseCase,
+    private readonly processPaymentUseCase: ProcessPaymentUseCase,
   ) {}
 
   @Post()
@@ -48,6 +58,39 @@ export class TransactionController {
       productPrice: result.value.productPrice.amount,
       cardMasked: result.value.cardMasked,
       createdAt: result.value.createdAt,
+    };
+  }
+
+  @Post(':id/pay')
+  async pay(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    const result = await this.processPaymentUseCase.execute({
+      transactionId: id,
+      cardNumber: body.cardNumber as string,
+      cardCvc: body.cardCvc as string,
+      cardExpiryMonth: body.cardExpiryMonth as string,
+      cardExpiryYear: body.cardExpiryYear as string,
+      cardHolder: body.cardHolder as string,
+      installments: (body.installments as number) ?? 1,
+    });
+
+    if (!result.ok) {
+      if (result.error instanceof PaymentValidationError) {
+        if (result.error.message.includes('not found')) {
+          throw new NotFoundException(result.error.message);
+        }
+        throw new BadRequestException(result.error.message);
+      }
+      if (result.error instanceof PaymentGatewayError) {
+        throw new UnprocessableEntityException(result.error.message);
+      }
+      throw new InternalServerErrorException(result.error.message);
+    }
+
+    return {
+      id: result.value.id,
+      status: result.value.status.toString(),
+      totalAmount: result.value.totalAmount.amount,
+      currency: result.value.totalAmount.currency,
     };
   }
 }

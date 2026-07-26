@@ -60,3 +60,5 @@ export interface PaymentGatewayPort {
     input: PaymentInput,
   ): Promise<{ ok: true; value: PaymentGatewayResult } | { ok: false; error: PaymentGatewayError }>;
 }
+
+export const PAYMENT_GATEWAY_PORT = 'PAYMENT_GATEWAY_PORT';

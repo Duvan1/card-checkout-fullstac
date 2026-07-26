@@ -1,7 +1,10 @@
 import { createHash } from 'crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { PaymentGatewayPort } from '../../domain/repositories/payment-gateway.port';
-import { PaymentGatewayError } from '../../domain/repositories/payment-gateway.port';
+import {
+  PaymentGatewayError,
+  PAYMENT_GATEWAY_PORT,
+} from '../../domain/repositories/payment-gateway.port';
 import { TRANSACTION_REPOSITORY } from '../../domain/repositories/transaction-repository.port';
 import type { TransactionRepository } from '../../domain/repositories/transaction-repository.port';
 import type { Transaction } from '../../domain/entities/transaction';
@@ -30,6 +33,7 @@ export class ProcessPaymentUseCase {
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: TransactionRepository,
+    @Inject(PAYMENT_GATEWAY_PORT)
     private readonly paymentGateway: PaymentGatewayPort,
   ) {}
 
