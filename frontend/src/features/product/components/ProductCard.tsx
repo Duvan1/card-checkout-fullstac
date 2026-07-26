@@ -26,7 +26,6 @@ interface ProductCardProps {
 }
 
 export function ProductCard({
-  id: _id,
   name,
   description,
   price,

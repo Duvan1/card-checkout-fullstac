@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductController } from './product.controller';
 import { GetProductsUseCase } from '../../../application/use-cases/get-products.use-case';
-import { GetProductByIdUseCase } from '../../../application/use-cases/get-product-by-id.use-case';
-import { NotFoundError } from '../../../application/use-cases/get-product-by-id.use-case';
+import { GetProductByIdUseCase, NotFoundError } from '../../../application/use-cases/get-product-by-id.use-case';
 import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { Product } from '../../../domain/entities/product';
 import { Money } from '../../../domain/value-objects/money';
