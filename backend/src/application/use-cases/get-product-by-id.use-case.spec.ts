@@ -26,6 +26,7 @@ describe('GetProductByIdUseCase', () => {
     productRepository = {
       findAll: jest.fn(),
       findById: jest.fn(),
+      decrementStock: jest.fn(),
     };
 
     useCase = new GetProductByIdUseCase(productRepository);

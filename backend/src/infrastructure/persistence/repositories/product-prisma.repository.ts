@@ -28,6 +28,19 @@ export class ProductPrismaRepository implements ProductRepository {
     return this.toDomain(row);
   }
 
+  async decrementStock(id: string, quantity: number): Promise<Product> {
+    const row = await this.prisma.product.update({
+      where: {
+        id,
+        stock: { gte: quantity },
+      },
+      data: {
+        stock: { decrement: quantity },
+      },
+    });
+
+    return this.toDomain(row);
+  }
   private toDomain(row: {
     id: string;
     name: string;
