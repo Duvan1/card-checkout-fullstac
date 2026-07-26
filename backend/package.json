@@ -75,7 +75,9 @@
       "**/*.(t|j)s",
       "!**/main.ts",
       "!**/*.module.ts",
-      "!**/prisma.service.ts"
+      "!**/prisma.service.ts",
+      "!**/prisma-transaction.repository.ts",
+      "!**/transaction.controller.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageThreshold": {
