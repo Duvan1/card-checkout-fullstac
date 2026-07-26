@@ -25,21 +25,11 @@ export class InfraStack extends cdk.Stack {
       emptyOnDelete: true,
     });
 
-    const paymentSecrets = new secretsmanager.Secret(
+    // Importación del secreto creado en AWS Secrets Manager para Wompi
+    const wompiSecrets = secretsmanager.Secret.fromSecretNameV2(
       this,
-      'PaymentGatewaySecrets',
-      {
-        secretName: 'card-checkout/payment-gateway',
-        description:
-          'Llaves privadas y secreto de eventos para la pasarela de pagos',
-        generateSecretString: {
-          secretStringTemplate: JSON.stringify({
-            PAYMENT_GATEWAY_PRIVATE_KEY: 'prv_test_dummy_key',
-            PAYMENT_GATEWAY_EVENTS_SECRET: 'evt_test_dummy_secret',
-          }),
-          generateStringKey: 'dummy_key',
-        },
-      }
+      'WompiPaymentSecrets',
+      'prod/card-checkout/payment-gateway'
     );
 
     const postgresDb = new rds.DatabaseInstance(
@@ -74,8 +64,7 @@ export class InfraStack extends cdk.Stack {
       }
     );
 
-
-    // NUEVO: secreto para Prisma DATABASE_URL
+    // Secreto para Prisma DATABASE_URL
     const databaseUrlSecret = new secretsmanager.Secret(
       this,
       'DatabaseUrlSecret',
@@ -91,7 +80,6 @@ export class InfraStack extends cdk.Stack {
       }
     );
 
-
     const ecsCluster = new ecs.Cluster(
       this,
       'CardCheckoutCluster',
@@ -99,7 +87,6 @@ export class InfraStack extends cdk.Stack {
         vpc,
       }
     );
-
 
     const fargateService =
       new ecsPatterns.ApplicationLoadBalancedFargateService(
@@ -115,9 +102,11 @@ export class InfraStack extends cdk.Stack {
 
           publicLoadBalancer: true,
 
+          circuitBreaker: {
+            rollback: true,
+          },
 
           taskImageOptions: {
-
             image:
               ecs.ContainerImage.fromEcrRepository(
                 ecrRepository,
@@ -125,7 +114,6 @@ export class InfraStack extends cdk.Stack {
               ),
 
             containerPort: 3000,
-
 
             environment: {
               NODE_ENV: 'production',
@@ -137,15 +125,12 @@ export class InfraStack extends cdk.Stack {
               DB_USER: 'postgres',
             },
 
-
             secrets: {
-
               DB_PASSWORD:
                 ecs.Secret.fromSecretsManager(
                   postgresDb.secret!,
                   'password'
                 ),
-
 
               DATABASE_URL:
                 ecs.Secret.fromSecretsManager(
@@ -153,24 +138,40 @@ export class InfraStack extends cdk.Stack {
                   'DATABASE_URL'
                 ),
 
+              // Credenciales exactas para la pasarela de pagos Wompi
+              PAYMENT_GATEWAY_API_URL:
+                ecs.Secret.fromSecretsManager(
+                  wompiSecrets,
+                  'PAYMENT_GATEWAY_API_URL'
+                ),
+
+              PAYMENT_GATEWAY_PUBLIC_KEY:
+                ecs.Secret.fromSecretsManager(
+                  wompiSecrets,
+                  'PAYMENT_GATEWAY_PUBLIC_KEY'
+                ),
 
               PAYMENT_GATEWAY_PRIVATE_KEY:
                 ecs.Secret.fromSecretsManager(
-                  paymentSecrets,
+                  wompiSecrets,
                   'PAYMENT_GATEWAY_PRIVATE_KEY'
                 ),
 
+              PAYMENT_GATEWAY_INTEGRITY_SECRET:
+                ecs.Secret.fromSecretsManager(
+                  wompiSecrets,
+                  'PAYMENT_GATEWAY_INTEGRITY_SECRET'
+                ),
 
               PAYMENT_GATEWAY_EVENTS_SECRET:
                 ecs.Secret.fromSecretsManager(
-                  paymentSecrets,
+                  wompiSecrets,
                   'PAYMENT_GATEWAY_EVENTS_SECRET'
                 ),
             },
           },
         }
       );
-
 
     fargateService.targetGroup.configureHealthCheck({
       path: '/api/health',
@@ -180,11 +181,9 @@ export class InfraStack extends cdk.Stack {
       unhealthyThresholdCount: 3,
     });
 
-
     postgresDb.connections.allowDefaultPortFrom(
       fargateService.service
     );
-
 
     const frontendBucket = new s3.Bucket(
       this,
@@ -199,7 +198,6 @@ export class InfraStack extends cdk.Stack {
         autoDeleteObjects: true,
       }
     );
-
 
     const frontendDistribution =
       new cloudfront.Distribution(
@@ -261,7 +259,6 @@ export class InfraStack extends cdk.Stack {
           ],
         }
       );
-
 
     new cdk.CfnOutput(this, 'EcrRepositoryUri', {
       value: ecrRepository.repositoryUri,
