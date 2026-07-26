@@ -2,10 +2,10 @@ name: Deploy Backend to AWS ECS
 
 on:
   push:
-    branches: [ main, develop, dev ]
+    branches: [main, develop, dev]
     paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
 
 permissions:
   id-token: write
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Build & Push Docker Image
+    name: Build & Deploy Backend
     runs-on: ubuntu-latest
 
     steps:
@@ -30,28 +30,55 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Get Infrastructure Outputs
+        run: |
+          echo "ECR_REPOSITORY=$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?OutputKey=='EcrRepositoryName'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+
+          echo "ECS_CLUSTER=$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?OutputKey=='EcsClusterName'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+
+          echo "ECS_SERVICE=$(aws cloudformation describe-stacks \
+            --stack-name InfraStack \
+            --query "Stacks[0].Outputs[?OutputKey=='EcsServiceName'].OutputValue" \
+            --output text)" >> $GITHUB_ENV
+
+      - name: Show Infrastructure
+        run: |
+          echo "Repository: $ECR_REPOSITORY"
+          echo "Cluster: $ECS_CLUSTER"
+          echo "Service: $ECS_SERVICE"
+
+      - name: Build, tag and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cd backend
+
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      # 🚀 NUEVO PASO: Fuerza el despliegue automático en ECS Fargate
       - name: Force ECS Redeployment
         run: |
-          # Obtiene dinámicamente el ARN/nombre del servicio dentro de CardCheckoutCluster
-          SERVICE_NAME=$(aws ecs list-services --cluster CardCheckoutCluster --query "serviceArns[0]" --output text)
-          
-          echo "Desplegando en el servicio: $SERVICE_NAME"
-          
           aws ecs update-service \
-            --cluster CardCheckoutCluster \
-            --service $SERVICE_NAME \
-            --force-new-deployment \
-            --region ${{ secrets.AWS_REGION }}
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment
+
+      - name: Wait for ECS deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - name: Deployment completed
+        run: |
+          echo "✅ Backend deployed successfully"
