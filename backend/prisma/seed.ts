@@ -71,13 +71,15 @@ async function main() {
   const count = await prisma.product.count();
 
   if (count > 0) {
-    await prisma.product.deleteMany();
-    console.log(`Cleared ${count} existing product(s).`);
+    console.log(
+      `Products already exist (${count}). Skipping seed.`
+    );
+    return;
   }
 
-  for (const product of products) {
-    await prisma.product.create({ data: product });
-  }
+  await prisma.product.createMany({
+    data: products,
+  });
 
   console.log(`Seed completed: ${products.length} products inserted.`);
 }

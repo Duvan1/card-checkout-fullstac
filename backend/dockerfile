@@ -31,4 +31,4 @@ COPY --from=builder /app/prisma.config.ts ./
 
 EXPOSE 3000
 
-CMD ["sh","-c","echo DATABASE_URL=$DATABASE_URL && npm run prisma:migrate && node dist/src/main.js"]
+CMD ["sh","-c","npm run prisma:migrate && npm run prisma:seed && node dist/src/main.js"]
