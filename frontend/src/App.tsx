@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -6,6 +6,19 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [backendStatus, setBackendStatus] = useState<string>('Conectando con AWS...')
+
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+    fetch(`${apiUrl}/health`)
+      .then((res) => res.text())
+      .then((data) => setBackendStatus(data))
+      .catch((err) => {
+        console.error('Error fetching backend:', err);
+        setBackendStatus('Error al conectar con el backend');
+      });
+  }, []);
 
   return (
     <>
@@ -16,9 +29,12 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get started</h1>
+          <h1>Card Checkout - Walking Skeleton</h1>
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Respuesta del Backend en AWS:
+          </p>
+          <p style={{ fontWeight: 'bold', color: '#646cff' }}>
+            <code>{backendStatus}</code>
           </p>
         </div>
         <button
