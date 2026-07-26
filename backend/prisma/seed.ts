@@ -1,12 +1,45 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
+const connectionString =
+  process.env.DATABASE_URL ??
+  `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+
+console.log('========== SEED DATABASE CONFIG ==========');
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_USER:', process.env.DB_USER);
+console.log(
+  'DB_PASSWORD:',
+  process.env.DB_PASSWORD ? '********' : 'UNDEFINED',
+);
+console.log('==========================================');
+
+const pool = new Pool({
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
-const prisma = new PrismaClient({ adapter });
+pool.on('connect', () => {
+  console.log('PostgreSQL Pool connected');
+});
+
+pool.on('error', (err) => {
+  console.error('Pool error:', err);
+});
+
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({
+  adapter,
+  log: ['query', 'info', 'warn', 'error'],
+});
 
 const products = [
   {
@@ -71,9 +104,7 @@ async function main() {
   const count = await prisma.product.count();
 
   if (count > 0) {
-    console.log(
-      `Products already exist (${count}). Skipping seed.`
-    );
+    console.log(`Products already exist (${count}). Skipping seed.`);
     return;
   }
 
@@ -85,10 +116,14 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: any) => {
     console.error('Seed failed:', e);
+    console.error('Meta:', e?.meta);
+    console.error('Driver adapter error:', e?.meta?.driverAdapterError);
+    console.error('Cause:', e?.meta?.driverAdapterError?.cause);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
