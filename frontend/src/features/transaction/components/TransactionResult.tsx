@@ -2,11 +2,13 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { processPayment, resetTransaction, fetchTransactionStatus } from '../store/transactionSlice';
+import { fetchProductById } from '../../product/store/productSlice';
 
 export function TransactionResult() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const checkout = useAppSelector((state) => state.checkout);
+  const product = useAppSelector((state) => state.product.selectedProduct);
   const { transaction, paymentStatus } = useAppSelector((state) => state.transaction);
 
   useEffect(() => {
@@ -27,6 +29,12 @@ export function TransactionResult() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (paymentStatus === 'approved' && checkout.productId && !product) {
+      dispatch(fetchProductById(checkout.productId));
+    }
+  }, [paymentStatus, checkout.productId]);
 
   useEffect(() => {
     if (!transaction || paymentStatus !== 'pending') return;
@@ -76,24 +84,63 @@ export function TransactionResult() {
       )}
 
       {paymentStatus === 'approved' && (
-        <div className="flex flex-col items-center justify-center p-12 bg-surface border border-outline-variant rounded-xl shadow-sm text-center max-w-md w-full">
-          <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center mb-8 shadow-sm">
-            <span className="text-secondary text-5xl">✓</span>
+        <div className="bg-surface border border-outline-variant rounded-xl shadow-sm max-w-lg w-full overflow-hidden">
+          <div className="p-8 text-center bg-secondary/5 border-b border-outline-variant">
+            <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <span className="text-secondary text-5xl">✓</span>
+            </div>
+            <h1 className="text-3xl font-semibold text-on-surface mb-1">Pago Exitoso</h1>
+            <p className="text-sm font-semibold text-secondary uppercase tracking-widest">
+              Transaccion Confirmada
+            </p>
           </div>
-          <h1 className="text-3xl font-semibold text-on-surface mb-1">¡Pago Exitoso!</h1>
-          <p className="text-sm font-semibold text-secondary uppercase tracking-widest mb-8">
-            Transaccion Confirmada
-          </p>
-          <div className="w-full space-y-3 text-left bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/30 mb-8">
-            <Row label="ID de Transaccion" value={transaction.id} />
-            <Row label="Monto Total" value={`${currency} ${total.toLocaleString()}`} bold />
+
+          <div className="p-6 space-y-4">
+            <Section title="Detalle del Producto">
+              <Row label="Producto" value={product?.name ?? checkout.productId} />
+              <Row label="Cantidad" value={String(transaction!.quantity ?? 1)} />
+            </Section>
+
+            <Section title="Resumen de Pago">
+              <Row label="Subtotal" value={`${currency} ${((transaction!.productPrice ?? 0)).toLocaleString()}`} />
+              <Row label="Fee de servicio" value={`${currency} ${((transaction!.baseFee ?? 0)).toLocaleString()}`} />
+              <Row label="Envio" value={`${currency} ${((transaction!.deliveryFee ?? 0)).toLocaleString()}`} />
+              <div className="pt-2 border-t border-outline-variant flex justify-between items-center">
+                <span className="text-sm font-bold text-on-surface">TOTAL</span>
+                <span className="text-lg font-extrabold text-primary">{currency} {total.toLocaleString()}</span>
+              </div>
+            </Section>
+
+            <Section title="Metodo de Pago">
+              <Row label="Tarjeta" value={`${checkout.cardBrand === 'visa' ? 'Visa' : checkout.cardBrand === 'mastercard' ? 'MasterCard' : 'Tarjeta'} **** ${checkout.cardNumber.slice(-4)}`} />
+              <Row label="Titular" value={checkout.cardHolder} />
+            </Section>
+
+            <Section title="Envio">
+              <Row label="Direccion" value={checkout.address} />
+              <Row label="Ciudad" value={checkout.city} />
+              <Row label="Destinatario" value={checkout.fullName} />
+            </Section>
           </div>
-          <button
-            onClick={() => { dispatch(resetTransaction()); navigate('/'); }}
-            className="w-full bg-primary text-on-primary py-3 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
-          >
-            Volver al catalogo
-          </button>
+
+          <div className="p-6 bg-surface-container-lowest border-t border-outline-variant flex flex-col gap-3">
+            <button
+              onClick={() => window.print()}
+              className="w-full py-3 bg-surface border border-outline-variant text-primary font-semibold rounded-lg
+                hover:bg-surface-container-low active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir ticket
+            </button>
+            <button
+              onClick={() => { dispatch(resetTransaction()); navigate('/'); }}
+              className="bg-primary text-on-primary py-3 rounded-lg font-semibold hover:shadow-lg active:scale-95 transition-all"
+            >
+              Volver al catalogo
+            </button>
+          </div>
         </div>
       )}
 
@@ -151,9 +198,18 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
   return (
     <div className="flex justify-between items-center">
       <span className="text-sm text-on-surface-variant">{label}</span>
-      <span className={`text-sm ${bold ? 'font-bold text-primary text-lg' : 'font-bold text-on-surface'}`}>
+      <span className={`text-sm ${bold ? 'font-bold text-primary text-lg' : 'font-medium text-on-surface'}`}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">{title}</p>
+      <div className="space-y-1.5 bg-surface-container-low p-3 rounded-lg">{children}</div>
     </div>
   );
 }
