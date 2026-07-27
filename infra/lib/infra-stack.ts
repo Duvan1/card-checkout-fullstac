@@ -32,6 +32,19 @@ export class InfraStack extends cdk.Stack {
       'prod/card-checkout/payment-gateway'
     );
 
+    const frontendUrlSecret = new secretsmanager.Secret(
+      this,
+      'FrontendUrlSecret',
+      {
+        secretName: 'card-checkout/frontend-url',
+        secretObjectValue: {
+          FRONTEND_URL: cdk.SecretValue.unsafePlainText(
+            'https://d3k7kreyyuu362.cloudfront.net'
+          ),
+        },
+      }
+    );
+
     const postgresDb = new rds.DatabaseInstance(
       this,
       'PostgresDatabase',
@@ -138,7 +151,11 @@ export class InfraStack extends cdk.Stack {
                   'DATABASE_URL'
                 ),
 
-              // Credenciales exactas para la pasarela de pagos Wompi
+              FRONTEND_URL:
+                ecs.Secret.fromSecretsManager(
+                  frontendUrlSecret,
+                  'FRONTEND_URL'
+                ),
               PAYMENT_GATEWAY_API_URL:
                 ecs.Secret.fromSecretsManager(
                   wompiSecrets,

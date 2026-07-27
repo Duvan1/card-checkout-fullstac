@@ -161,7 +161,12 @@ model Product {
 | `POST` | `/api/transactions` | Crear transaccion PENDING | Body: `productId`, `quantity`, `customer`, `delivery` |
 | `GET` | `/api/transactions/:id` | Consultar transaccion | — |
 | `POST` | `/api/transactions/:id/pay` | Procesar pago | Body: `cardNumber`, `cardCvc`, `cardExpiryMonth`, `cardExpiryYear`, `cardHolder`, `installments`, `customerEmail` |
+| `POST` | `/api/webhooks/payment-events` | Recepcion de eventos del gateway | Requiere firma HMAC-SHA256 |
 | `GET` | `/` | Health check ALB (sin prefix) | — |
+
+### Swagger
+
+Documentacion interactiva disponible en `http://localhost:3000/api/docs`
 
 ### Ejemplos
 
