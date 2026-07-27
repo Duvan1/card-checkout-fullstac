@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   type PaymentGatewayPort,
   type PaymentInput,
@@ -11,8 +11,6 @@ import {
 
 @Injectable()
 export class PaymentGatewayAdapter implements PaymentGatewayPort {
-  private readonly logger = new Logger(PaymentGatewayAdapter.name);
-
   private readonly baseUrl: string;
   private readonly publicKey: string;
   private readonly privateKey: string;
@@ -27,31 +25,28 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
       publicKey: this.publicKey ? 'SET' : 'MISSING',
       privateKey: this.privateKey ? 'SET' : 'MISSING',
     });
-
-    if (!this.baseUrl || !this.publicKey || !this.privateKey) {
-      this.logger.warn('Payment gateway credentials not fully configured');
-    }
   }
 
   async getAcceptanceTokens(): Promise<
     { ok: true; value: AcceptanceTokens } | { ok: false; error: PaymentGatewayError }
   > {
+    const url = `${this.baseUrl}/merchants/${this.publicKey}`;
+    console.error('[Gateway] getAcceptanceTokens REQUEST', { url });
     try {
-      const res = await fetch(`${this.baseUrl}/merchants/${this.publicKey}`);
+      const res = await fetch(url);
+      console.error('[Gateway] getAcceptanceTokens RESPONSE', { status: res.status, ok: res.ok });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.error('[Gateway] getAcceptanceTokens ERROR BODY', JSON.stringify(body));
         return {
           ok: false,
-          error: new PaymentGatewayError(
-            'Failed to get acceptance tokens',
-            'ACCEPTANCE_TOKEN_ERROR',
-            res.status,
-          ),
+          error: new PaymentGatewayError('Failed to get acceptance tokens', 'ACCEPTANCE_TOKEN_ERROR', res.status),
         };
       }
 
       const body = await res.json();
+      console.error('[Gateway] getAcceptanceTokens OK');
       return {
         ok: true,
         value: {
@@ -60,13 +55,13 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         },
       };
     } catch (err) {
+      console.error('[Gateway] getAcceptanceTokens CATCH', {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : 'Unknown',
+      });
       return {
         ok: false,
-        error: new PaymentGatewayError(
-          err instanceof Error ? err.message : 'Network error',
-          'NETWORK_ERROR',
-          0,
-        ),
+        error: new PaymentGatewayError(err instanceof Error ? err.message : 'Network error', 'NETWORK_ERROR', 0),
       };
     }
   }
@@ -74,6 +69,15 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
   async tokenizeCard(
     input: CardTokenInput,
   ): Promise<{ ok: true; value: CardTokenResult } | { ok: false; error: PaymentGatewayError }> {
+    const body = {
+      number: input.number.replace(/\d(?=\d{4})/g, '*'),
+      cvc: '***',
+      exp_month: input.expMonth,
+      exp_year: input.expYear,
+      card_holder: input.cardHolder,
+    };
+    console.error('[Gateway] tokenizeCard REQUEST', JSON.stringify(body));
+
     try {
       const res = await fetch(`${this.baseUrl}/tokens/cards`, {
         method: 'POST',
@@ -90,11 +94,12 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
-      console.error('[Adapter] tokenizeCard body:', JSON.stringify({ number: input.number?.replace(/\d(?=\d{4})/g, '*'), cvc: '***', exp_month: input.expMonth, exp_year: input.expYear, card_holder: input.cardHolder }));
+      console.error('[Gateway] tokenizeCard RESPONSE', { status: res.status, ok: res.ok });
+
+      const resBody = await res.json();
 
       if (!res.ok) {
-        const resBody = await res.json().catch(() => ({}));
-        console.error('[Gateway] tokenizeCard FAILED', { status: res.status, body: JSON.stringify(resBody) });
+        console.error('[Gateway] tokenizeCard ERROR BODY', JSON.stringify(resBody));
         const reason = resBody.error?.reason ?? resBody.error?.type ?? 'Tokenization failed';
         return {
           ok: false,
@@ -102,24 +107,23 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         };
       }
 
-      const body = await res.json();
-
+      console.error('[Gateway] tokenizeCard OK', { token: resBody.data?.id });
       return {
         ok: true,
         value: {
-          token: body.data.id,
-          brand: body.data.brand ?? 'UNKNOWN',
-          lastFour: body.data.last_four ?? '****',
+          token: resBody.data.id,
+          brand: resBody.data.brand ?? 'UNKNOWN',
+          lastFour: resBody.data.last_four ?? '****',
         },
       };
     } catch (err) {
+      console.error('[Gateway] tokenizeCard CATCH', {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : 'Unknown',
+      });
       return {
         ok: false,
-        error: new PaymentGatewayError(
-          err instanceof Error ? err.message : 'Network error',
-          'NETWORK_ERROR',
-          0,
-        ),
+        error: new PaymentGatewayError(err instanceof Error ? err.message : 'Network error', 'NETWORK_ERROR', 0),
       };
     }
   }
@@ -127,6 +131,13 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
   async processPayment(
     input: PaymentInput,
   ): Promise<{ ok: true; value: PaymentGatewayResult } | { ok: false; error: PaymentGatewayError }> {
+    console.error('[Gateway] processPayment REQUEST', {
+      amount: input.amountInCents,
+      ref: input.reference,
+      email: input.customerEmail,
+      hasToken: !!input.cardToken,
+    });
+
     try {
       const res = await fetch(`${this.baseUrl}/transactions`, {
         method: 'POST',
@@ -150,10 +161,12 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
+      console.error('[Gateway] processPayment RESPONSE', { status: res.status, ok: res.ok });
+
       const resBody = await res.json();
 
       if (!res.ok) {
-        console.error('[Gateway] processPayment FAILED', { status: res.status, body: JSON.stringify(resBody) });
+        console.error('[Gateway] processPayment ERROR BODY', JSON.stringify(resBody));
         const reason = resBody.error?.reason ?? resBody.error?.type ?? 'Unknown error';
         return {
           ok: false,
@@ -162,7 +175,7 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
       }
 
       const data = resBody.data;
-
+      console.error('[Gateway] processPayment OK', { gwId: data.id, status: data.status });
       return {
         ok: true,
         value: {
@@ -173,13 +186,13 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         },
       };
     } catch (err) {
+      console.error('[Gateway] processPayment CATCH', {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : 'Unknown',
+      });
       return {
         ok: false,
-        error: new PaymentGatewayError(
-          err instanceof Error ? err.message : 'Network error',
-          'NETWORK_ERROR',
-          0,
-        ),
+        error: new PaymentGatewayError(err instanceof Error ? err.message : 'Network error', 'NETWORK_ERROR', 0),
       };
     }
   }
