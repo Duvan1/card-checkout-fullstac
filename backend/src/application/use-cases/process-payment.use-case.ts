@@ -49,6 +49,7 @@ export class ProcessPaymentUseCase {
   ): Promise<Result<Transaction, PaymentValidationError | PaymentGatewayError | Error>> {
     try {
       const transaction = await this.transactionRepository.findById(dto.transactionId);
+      console.error('[ProcessPayment] STEP1 findById', { found: !!transaction, status: transaction?.status.toString() });
       if (!transaction) {
         return err(new PaymentValidationError('Transaction not found'));
       }
@@ -62,6 +63,7 @@ export class ProcessPaymentUseCase {
       }
 
       const tokensResult = await this.paymentGateway.getAcceptanceTokens();
+      console.error('[ProcessPayment] STEP2 tokens', { ok: tokensResult.ok });
       if (!tokensResult.ok) {
         await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
         return tokensResult;
@@ -74,6 +76,7 @@ export class ProcessPaymentUseCase {
         expYear: dto.cardExpiryYear,
         cardHolder: dto.cardHolder,
       });
+      console.error('[ProcessPayment] STEP3 tokenizeCard', { ok: cardResult.ok });
       if (!cardResult.ok) {
         await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
         return cardResult;
@@ -98,6 +101,7 @@ export class ProcessPaymentUseCase {
         signature,
       });
 
+      console.error('[ProcessPayment] STEP4 pay', { ok: paymentResult.ok, amount: amountInCents, ref: reference });
       if (!paymentResult.ok) {
         console.error('[ProcessPayment] PAYMENT FAILED:', {
           code: paymentResult.error.code,

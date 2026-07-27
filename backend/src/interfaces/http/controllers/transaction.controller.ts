@@ -92,6 +92,7 @@ export class TransactionController {
 
   @Post(':id/pay')
   async pay(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    console.error('[Controller] pay START', { id, hasCard: !!body.cardNumber, expiry: body.cardExpiryMonth + '/' + body.cardExpiryYear });
     const result = await this.processPaymentUseCase.execute({
       transactionId: id,
       cardNumber: body.cardNumber as string,
@@ -102,6 +103,8 @@ export class TransactionController {
       installments: (body.installments as number) ?? 1,
       customerEmail: (body.customerEmail as string) ?? (body.email as string) ?? '',
     });
+
+    console.error('[Controller] pay RESULT', { ok: result.ok, error: !result.ok ? result.error.message : null });
 
     if (!result.ok) {
       if (result.error instanceof PaymentValidationError) {

@@ -90,7 +90,7 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
         }),
       });
 
-      console.log('[Adapter] tokenizeCard body:', JSON.stringify({ number: input.number?.replace(/\d(?=\d{4})/g, '*'), cvc: '***', exp_month: input.expMonth, exp_year: input.expYear, card_holder: input.cardHolder }));
+      console.error('[Adapter] tokenizeCard body:', JSON.stringify({ number: input.number?.replace(/\d(?=\d{4})/g, '*'), cvc: '***', exp_month: input.expMonth, exp_year: input.expYear, card_holder: input.cardHolder }));
 
       if (!res.ok) {
         const resBody = await res.json().catch(() => ({}));
