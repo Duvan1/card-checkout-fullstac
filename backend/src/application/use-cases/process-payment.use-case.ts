@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { PaymentGatewayPort } from '../../domain/repositories/payment-gateway.port';
 import {
   PaymentGatewayError,
@@ -35,8 +35,6 @@ export interface ProcessPaymentDto {
 
 @Injectable()
 export class ProcessPaymentUseCase {
-  private readonly logger = new Logger(ProcessPaymentUseCase.name);
-
   constructor(
     @Inject(TRANSACTION_REPOSITORY)
     private readonly transactionRepository: TransactionRepository,
@@ -64,7 +62,6 @@ export class ProcessPaymentUseCase {
       }
 
       const tokensResult = await this.paymentGateway.getAcceptanceTokens();
-      console.log('[ProcessPayment] tokensResult ok=%s', tokensResult.ok, tokensResult);
       if (!tokensResult.ok) {
         await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
         return tokensResult;
@@ -77,7 +74,6 @@ export class ProcessPaymentUseCase {
         expYear: dto.cardExpiryYear,
         cardHolder: dto.cardHolder,
       });
-      console.log('[ProcessPayment] cardResult ok=%s', cardResult.ok, cardResult);
       if (!cardResult.ok) {
         await this.transactionRepository.updateStatus(transaction.id, 'ERROR');
         return cardResult;
@@ -90,8 +86,6 @@ export class ProcessPaymentUseCase {
       const signatureString = `${reference}${amountInCents}COP${integritySecret}`;
       const signature = createHash('sha256').update(signatureString).digest('hex');
 
-      this.logger.log(`Paying: ref=${reference} amount=${amountInCents} cents sig=${signature.substring(0,10)}...`);
-
       const paymentResult = await this.paymentGateway.processPayment({
         amountInCents,
         currency: 'COP',
@@ -103,8 +97,6 @@ export class ProcessPaymentUseCase {
         acceptPersonalAuth: tokensResult.value.acceptPersonalAuth,
         signature,
       });
-
-      console.log('[ProcessPayment] paymentResult:', JSON.stringify(paymentResult));
 
       if (!paymentResult.ok) {
         await this.transactionRepository.updateStatus(transaction.id, 'DECLINED');
