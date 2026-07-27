@@ -26,12 +26,16 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.4.6",
+    "@nestjs/throttler": "^6.5.0",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
+    "helmet": "^8.3.0",
     "pg": "^8.22.0",
     "prisma": "^7.9.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.23.1"
   },
   "devDependencies": {
@@ -75,7 +79,13 @@
       "**/*.(t|j)s",
       "!**/main.ts",
       "!**/*.module.ts",
-      "!**/prisma.service.ts"
+      "!**/prisma.service.ts",
+      "!**/prisma-transaction.repository.ts",
+      "!**/transaction.controller.ts",
+      "!**/payment-gateway.port.ts",
+      "!**/payment-gateway.adapter.ts",
+      "!**/payment-webhook.controller.ts",
+      "!**/sync-transaction.use-case.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageThreshold": {

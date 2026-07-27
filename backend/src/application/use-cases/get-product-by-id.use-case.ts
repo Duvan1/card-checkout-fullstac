@@ -29,7 +29,7 @@ export class GetProductByIdUseCase {
       return ok(product);
     } catch (error) {
       return err(
-        error instanceof Error ? error : new Error('Failed to fetch product'),
+        error instanceof Error ? error : new Error('Failed to fetch product', { cause: error }),
       );
     }
   }

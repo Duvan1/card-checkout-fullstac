@@ -4,9 +4,16 @@ import {
   NotFoundException,
   InternalServerErrorException,
   Param,
+  Query,
 } from '@nestjs/common';
 import { GetProductsUseCase } from '../../../application/use-cases/get-products.use-case';
-import { GetProductByIdUseCase } from '../../../application/use-cases/get-product-by-id.use-case';
+import {
+  GetProductByIdUseCase,
+  NotFoundError,
+} from '../../../application/use-cases/get-product-by-id.use-case';
+
+const VALID_SORT_BY = new Set(['price', 'name', 'stock']);
+const VALID_SORT_ORDER = new Set(['asc', 'desc']);
 
 @Controller('products')
 export class ProductController {
@@ -16,8 +23,20 @@ export class ProductController {
   ) {}
 
   @Get()
-  async findAll() {
-    const result = await this.getProductsUseCase.execute();
+  async findAll(
+    @Query('search') search?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
+    const result = await this.getProductsUseCase.execute({
+      search,
+      minPrice: minPrice !== undefined ? Number(minPrice) : undefined,
+      maxPrice: maxPrice !== undefined ? Number(maxPrice) : undefined,
+      sortBy: sortBy && VALID_SORT_BY.has(sortBy) ? (sortBy as 'price' | 'name' | 'stock') : undefined,
+      sortOrder: sortOrder && VALID_SORT_ORDER.has(sortOrder) ? (sortOrder as 'asc' | 'desc') : undefined,
+    });
 
     if (!result.ok) {
       throw new InternalServerErrorException(result.error.message);
@@ -31,7 +50,7 @@ export class ProductController {
     const result = await this.getProductByIdUseCase.execute(id);
 
     if (!result.ok) {
-      if (result.error.constructor.name === 'NotFoundError') {
+      if (result.error instanceof NotFoundError) {
         throw new NotFoundException(result.error.message);
       }
       throw new InternalServerErrorException(result.error.message);
