@@ -393,12 +393,12 @@ Verificacion: HMAC-SHA256 concatenando valores de `properties` + `timestamp` + `
 
 ```bash
 # Backend
-cd backend && npm test              # Unit + integration (72 tests)
-cd backend && npm test -- --coverage
+cd backend && npm run test              # Unit + integration (72 tests)
+cd backend && npm run test:cov
 
 # Frontend
-cd frontend && npm test              # Unit + componentes (35 tests)
-cd frontend && npm test -- --coverage
+cd frontend && npm run test              # Unit + componentes (35 tests)
+cd frontend && npm run test:cov
 ```
 
 ---
