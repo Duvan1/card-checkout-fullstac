@@ -32,6 +32,11 @@ export const processPayment = createAsyncThunk(
     transactionService.pay(id, payload),
 );
 
+export const fetchTransactionStatus = createAsyncThunk(
+  'transaction/fetchStatus',
+  async (id: string) => transactionService.getById(id),
+);
+
 const transactionSlice = createSlice({
   name: 'transaction',
   initialState,
@@ -52,6 +57,12 @@ const transactionSlice = createSlice({
       .addCase(processPayment.pending, (state) => {
         state.paymentStatus = 'processing';
         state.error = null;
+      })
+      .addCase(fetchTransactionStatus.fulfilled, (state, action) => {
+        state.transaction = action.payload;
+        if (action.payload.status !== 'PENDING') {
+          state.paymentStatus = action.payload.status === 'APPROVED' ? 'approved' : 'declined';
+        }
       })
       .addCase(processPayment.fulfilled, (state, action) => {
         state.paymentResult = action.payload;

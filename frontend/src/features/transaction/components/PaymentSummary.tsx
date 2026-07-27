@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../shared/hooks';
 import { Backdrop } from '../../../shared/components/Backdrop';
 import { createTransaction, resetTransaction } from '../store/transactionSlice';
+import { fetchProductById } from '../../product/store/productSlice';
 import { maskCardNumber } from '../../../shared/utils/luhn';
 
 export function PaymentSummary() {
@@ -10,6 +12,12 @@ export function PaymentSummary() {
   const checkout = useAppSelector((state) => state.checkout);
   const product = useAppSelector((state) => state.product.selectedProduct);
   const tx = useAppSelector((state) => state.transaction);
+
+  useEffect(() => {
+    if (!product && checkout.productId) {
+      dispatch(fetchProductById(checkout.productId));
+    }
+  }, [product, checkout.productId]);
 
   const quantity = checkout.quantity || 1;
   const baseFee = 2500;

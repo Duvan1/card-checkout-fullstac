@@ -5,6 +5,8 @@ export interface TransactionRepository {
   create(data: CreateTransactionData): Promise<Transaction>;
   findById(id: string): Promise<Transaction | null>;
   updateStatus(id: string, status: TransactionStatus): Promise<Transaction>;
+  findByGatewayReference(ref: string): Promise<Transaction | null>;
+  saveGatewayReference(id: string, ref: string): Promise<void>;
 }
 
 export interface CreateTransactionData {

@@ -188,10 +188,10 @@ curl http://localhost:3000/api/health
 
 | | Backend | Frontend |
 |---|---|---|
-| **Statements** | 96.57% | 86.17% |
-| **Branches** | 85.18% | 73.33% |
-| **Functions** | 95.00% | 75.00% |
-| **Lines** | 97.01% | 88.23% |
+| **Statements** | 95.87% | 86.17% |
+| **Branches** | 81.56% | 73.33% |
+| **Functions** | 93.44% | 75.00% |
+| **Lines** | 96.25% | 88.23% |
 | **Tests** | 91 | 35 |
 | **Runner** | Jest 30 | Jest 30 |
 
@@ -356,7 +356,9 @@ El proyecto sigue principios SOLID y Clean Code. Una auditoria completa encontro
 - [x] ~~Pantalla de resultado de transaccion (frontend)~~
 - [x] ~~redux-persist (checkout + transaction) con exclusion de datos de tarjeta~~
 - [x] ~~Prisma models: Transaction, Customer, Delivery~~
-- [ ] POST /webhooks/payment-events — Recepcion de eventos del gateway
-- [ ] Polling como fallback del webhook
-- [ ] Actualizar stock solo al confirmar pago (APPROVED)
-- [ ] Swagger / OpenAPI documentation
+- [x] ~~POST /webhooks/payment-events — Recepcion de eventos del gateway~~
+- [x] ~~Sync perezoso en GET /transactions/:id como fallback del webhook~~
+- [x] ~~Actualizar stock al confirmar pago (APPROVED)~~
+- [x] ~~Polling frontend cada 3s hasta resultado final~~
+- [x] ~~Resiliencia al refresh con reanudacion de checkout~~
+- [x] ~~Ticket de compra con desglose detallado~~

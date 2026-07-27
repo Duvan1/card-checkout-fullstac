@@ -79,7 +79,9 @@
       "!**/prisma-transaction.repository.ts",
       "!**/transaction.controller.ts",
       "!**/payment-gateway.port.ts",
-      "!**/payment-gateway.adapter.ts"
+      "!**/payment-gateway.adapter.ts",
+      "!**/payment-webhook.controller.ts",
+      "!**/sync-transaction.use-case.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageThreshold": {

@@ -44,4 +44,7 @@ export const transactionService = {
 
   pay: (id: string, payload: PayTransactionPayload) =>
     apiClient.post<PayTransactionResult>(`/transactions/${id}/pay`, payload).then((r) => r.data),
+
+  getById: (id: string) =>
+    apiClient.get<TransactionDto>(`/transactions/${id}`).then((r) => r.data),
 };

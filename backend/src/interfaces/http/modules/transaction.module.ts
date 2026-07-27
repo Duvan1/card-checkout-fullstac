@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TransactionController } from '../controllers/transaction.controller';
 import { CreateTransactionUseCase } from '../../../application/use-cases/create-transaction.use-case';
 import { ProcessPaymentUseCase } from '../../../application/use-cases/process-payment.use-case';
+import { SyncTransactionUseCase } from '../../../application/use-cases/sync-transaction.use-case';
 import { PRODUCT_REPOSITORY } from '../../../domain/repositories/product-repository.port';
 import { TRANSACTION_REPOSITORY } from '../../../domain/repositories/transaction-repository.port';
 import { PAYMENT_GATEWAY_PORT } from '../../../domain/repositories/payment-gateway.port';
@@ -16,6 +17,7 @@ import { PaymentGatewayAdapter } from '../../../infrastructure/payment-gateway/p
     PrismaService,
     CreateTransactionUseCase,
     ProcessPaymentUseCase,
+    SyncTransactionUseCase,
     PaymentGatewayAdapter,
     {
       provide: PRODUCT_REPOSITORY,
