@@ -415,3 +415,14 @@ El proyecto sigue principios SOLID y Clean Code. Una auditoria completa encontro
 
 ---
 
+## Tarjetas de Prueba (Sandbox)
+
+| Tarjeta | Resultado |
+|---------|-----------|
+| `4242 4242 4242 4242` | Transaccion **APROBADA** |
+| `4111 1111 1111 1111` | Transaccion **DECLINADA** |
+
+Cualquier fecha de expiracion futura y CVC de 3 digitos son validos. Otras tarjetas no son aceptadas por el sandbox.
+
+---
+
