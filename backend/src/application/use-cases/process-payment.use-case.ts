@@ -99,6 +99,11 @@ export class ProcessPaymentUseCase {
       });
 
       if (!paymentResult.ok) {
+        console.error('[ProcessPayment] PAYMENT FAILED:', {
+          code: paymentResult.error.code,
+          statusCode: paymentResult.error.statusCode,
+          message: paymentResult.error.message,
+        });
         await this.transactionRepository.updateStatus(transaction.id, 'DECLINED');
         return paymentResult;
       }

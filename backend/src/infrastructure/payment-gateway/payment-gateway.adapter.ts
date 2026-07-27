@@ -22,6 +22,12 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
     this.publicKey = process.env.PAYMENT_GATEWAY_PUBLIC_KEY ?? '';
     this.privateKey = process.env.PAYMENT_GATEWAY_PRIVATE_KEY ?? '';
 
+    console.error('[Gateway] Init', {
+      baseUrl: this.baseUrl ? 'SET' : 'MISSING',
+      publicKey: this.publicKey ? 'SET' : 'MISSING',
+      privateKey: this.privateKey ? 'SET' : 'MISSING',
+    });
+
     if (!this.baseUrl || !this.publicKey || !this.privateKey) {
       this.logger.warn('Payment gateway credentials not fully configured');
     }
@@ -87,9 +93,9 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
       console.log('[Adapter] tokenizeCard body:', JSON.stringify({ number: input.number?.replace(/\d(?=\d{4})/g, '*'), cvc: '***', exp_month: input.expMonth, exp_year: input.expYear, card_holder: input.cardHolder }));
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        console.log('[Adapter] tokenizeCard error:', JSON.stringify(body));
-        const reason = body.error?.reason ?? body.error?.type ?? 'Tokenization failed';
+        const resBody = await res.json().catch(() => ({}));
+        console.error('[Gateway] tokenizeCard FAILED', { status: res.status, body: JSON.stringify(resBody) });
+        const reason = resBody.error?.reason ?? resBody.error?.type ?? 'Tokenization failed';
         return {
           ok: false,
           error: new PaymentGatewayError(reason, 'TOKENIZATION_ERROR', res.status),
@@ -147,7 +153,7 @@ export class PaymentGatewayAdapter implements PaymentGatewayPort {
       const resBody = await res.json();
 
       if (!res.ok) {
-        this.logger.error(`Gateway error ${res.status}:`, JSON.stringify(resBody));
+        console.error('[Gateway] processPayment FAILED', { status: res.status, body: JSON.stringify(resBody) });
         const reason = resBody.error?.reason ?? resBody.error?.type ?? 'Unknown error';
         return {
           ok: false,
