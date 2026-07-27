@@ -29,7 +29,7 @@ export class InfraStack extends cdk.Stack {
     const wompiSecrets = secretsmanager.Secret.fromSecretNameV2(
       this,
       'WompiPaymentSecrets',
-      'prod/card-checkout/payment-gateway'
+      'card-checkout/payment-gateway'
     );
 
     const frontendUrlSecret = new secretsmanager.Secret(
