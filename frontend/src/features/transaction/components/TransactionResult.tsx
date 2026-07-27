@@ -112,7 +112,7 @@ export function TransactionResult() {
             </Section>
 
             <Section title="Metodo de Pago">
-              <Row label="Tarjeta" value={`${checkout.cardBrand === 'visa' ? 'Visa' : checkout.cardBrand === 'mastercard' ? 'MasterCard' : 'Tarjeta'} **** ${checkout.cardNumber.slice(-4)}`} />
+              <Row label="Tarjeta" value={`${checkout.cardBrand === 'visa' ? 'Visa' : checkout.cardBrand === 'mastercard' ? 'MasterCard' : 'Tarjeta'} **** ${(checkout.cardNumber || '****').slice(-4)}`} />
               <Row label="Titular" value={checkout.cardHolder} />
             </Section>
 

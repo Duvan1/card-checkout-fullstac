@@ -40,12 +40,12 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
   console.error('[Bootstrap] Env check', {
-    DB: process.env.DATABASE_URL ? 'SET' : 'MISSING',
-    GW_URL: process.env.PAYMENT_GATEWAY_API_URL ? 'SET' : 'MISSING',
-    GW_PUB: process.env.PAYMENT_GATEWAY_PUBLIC_KEY ? 'SET' : 'MISSING',
-    GW_PRIV: process.env.PAYMENT_GATEWAY_PRIVATE_KEY ? 'SET' : 'MISSING',
-    GW_INT: process.env.PAYMENT_GATEWAY_INTEGRITY_SECRET ? 'SET' : 'MISSING',
-    GW_EV: process.env.PAYMENT_GATEWAY_EVENTS_SECRET ? 'SET' : 'MISSING',
+    DB: process.env.DATABASE_URL,
+    GW_URL: process.env.PAYMENT_GATEWAY_API_URL,
+    GW_PUB: process.env.PAYMENT_GATEWAY_PUBLIC_KEY,
+    GW_PRIV: process.env.PAYMENT_GATEWAY_PRIVATE_KEY,
+    GW_INT: process.env.PAYMENT_GATEWAY_INTEGRITY_SECRET,
+    GW_EV: process.env.PAYMENT_GATEWAY_EVENTS_SECRET,
   });
 }
 void bootstrap();

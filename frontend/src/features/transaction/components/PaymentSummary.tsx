@@ -14,6 +14,12 @@ export function PaymentSummary() {
   const tx = useAppSelector((state) => state.transaction);
 
   useEffect(() => {
+    if (tx.transaction || tx.error) {
+      dispatch(resetTransaction());
+    }
+  }, []);
+
+  useEffect(() => {
     if (!product && checkout.productId) {
       dispatch(fetchProductById(checkout.productId));
     }
