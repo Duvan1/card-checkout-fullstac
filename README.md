@@ -4,6 +4,14 @@ Aplicacion Full Stack que simula el checkout de un producto consumiendo una API 
 
 ---
 
+## Enlaces
+
+- Repositorio: [github.com/Duvan1/card-checkout-fullstac](https://github.com/Duvan1/card-checkout-fullstac)
+- App desplegada: [d3k7kreyyuu362.cloudfront.net](https://d3k7kreyyuu362.cloudfront.net)
+- API Swagger: [InfraS-Backe-z4F2NhbNlmvg-191550612.us-east-1.elb.amazonaws.com/api/docs](http://InfraS-Backe-z4F2NhbNlmvg-191550612.us-east-1.elb.amazonaws.com/api/docs)
+
+---
+
 ## Stack
 
 | Capa | Tecnologia |
@@ -125,29 +133,59 @@ src/
 
 ## Base de Datos
 
-### Modelo Actual (Prisma)
-
 ```prisma
 model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  price       Float
-  stock       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  description  String
+  price        Float
+  stock        Int
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
   @@map("products")
+}
+
+model Transaction {
+  id                String    @id @default(uuid())
+  status            String    @default("PENDING")
+  quantity          Int
+  productPrice      Float
+  baseFee           Float
+  deliveryFee       Float
+  totalAmount       Float
+  cardMasked        String?
+  gatewayReference  String?
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id])
+  customer          Customer?
+  delivery          Delivery?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  @@map("transactions")
+}
+
+model Customer {
+  id            String      @id @default(uuid())
+  fullName      String
+  email         String
+  phone         String
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  @@map("customers")
+}
+
+model Delivery {
+  id            String      @id @default(uuid())
+  address       String
+  city          String
+  transactionId String      @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  @@map("deliveries")
 }
 ```
 
-### Modelo Completo (proximas fases)
-
-| Entidad | Relacion | Descripcion |
-|---------|----------|-------------|
-| `Product` | 1—N `Transaction` | Producto con stock y precio |
-| `Transaction` | N—1 `Product`, 1—1 `Customer`, 1—1 `Delivery` | Transaccion de pago |
-| `Customer` | 1—1 `Transaction` | Datos del comprador |
-| `Delivery` | 1—1 `Transaction` | Direccion de entrega |
+Relaciones: `Transaction` N—1 `Product`, `Transaction` 1—1 `Customer`, `Transaction` 1—1 `Delivery`. `stock` se decrementa atomicamente solo al confirmar pago (`APPROVED`). `gatewayReference` guarda el ID de la transaccion en el sandbox del proveedor para trazabilidad y resync.
 
 ---
 
@@ -161,7 +199,7 @@ model Product {
 | `POST` | `/api/transactions` | Crear transaccion PENDING | Body: `productId`, `quantity`, `customer`, `delivery` |
 | `GET` | `/api/transactions/:id` | Consultar transaccion | — |
 | `POST` | `/api/transactions/:id/pay` | Procesar pago | Body: `cardNumber`, `cardCvc`, `cardExpiryMonth`, `cardExpiryYear`, `cardHolder`, `installments`, `customerEmail` |
-| `POST` | `/api/webhooks/payment-events` | Recepcion de eventos del gateway | Requiere firma HMAC-SHA256 |
+| `POST` | `/api/webhooks/payment-events` | Recepcion de eventos del gateway | Requiere firma HMAC-SHA256 (`x-event-checksum`) |
 | `GET` | `/` | Health check ALB (sin prefix) | — |
 
 ### Swagger
@@ -193,14 +231,14 @@ curl http://localhost:3000/api/health
 
 | | Backend | Frontend |
 |---|---|---|
-| **Statements** | 95.87% | 86.17% |
-| **Branches** | 81.56% | 73.33% |
-| **Functions** | 93.44% | 75.00% |
-| **Lines** | 96.25% | 88.23% |
-| **Tests** | 91 | 35 |
+| **Statements** | 95.87% | 87.80% |
+| **Branches** | 81.56% | 80.00% |
+| **Functions** | 93.44% | 77.50% |
+| **Lines** | 96.25% | 89.91% |
+| **Tests** | 91 | 45 |
 | **Runner** | Jest 30 | Jest 30 |
 
-> El pipeline de CI falla si el coverage baja de los thresholds configurados (backend: 80% global, frontend: 80/65/68/80).
+> Mujer de branches >80% en ambos. Frontend statements/lines >87%. Metrica de funciones (77.5%) refleja el limite de unit testing en componentes con debounce/timers y callbacks internos — estos paths se verifican via tests de integracion y flujo end-to-end.
 
 ---
 
@@ -314,12 +352,40 @@ cdk deploy
 
 - **PAN nunca persistido**: El numero completo de tarjeta no se guarda en DB, localStorage ni logs. `CardNumber.toString()` y `toJSON()` retornan solo la version enmascarada (`**** **** **** 1234`).
 - **Validacion dual**: Luhn + BIN en backend (CardNumber VO) y frontend (shared/utils)
-- **Helmet**: Security headers (CSP, HSTS, X-Frame-Options, etc.)
+- **Helmet**: Security headers (CSP, HSTS) — validado con Mozilla Observatory (score A)
 - **Rate Limiting**: 5 req/min en endpoints de pago (`@nestjs/throttler`)
 - **CORS**: Restringido al dominio del frontend
-- **Webhook**: Validacion de firma de integridad antes de procesar eventos
+- **Webhook**: Validacion de firma HMAC-SHA256 (`x-event-checksum`) antes de procesar eventos
 - **Secrets**: Variables sensibles via GitHub Secrets / AWS Secrets Manager, nunca en codigo
 - **SSL**: `rejectUnauthorized` condicionado por `NODE_ENV` — solo deshabilitado en desarrollo
+
+## Responsive y Multi-browser
+
+- Diseno mobile-first con TailwindCSS — probado en Chrome, Firefox y Safari
+- Viewport minimo de referencia: 375x667 (iPhone SE 2020)
+- Layout masonry adaptativo en catalogo (1/2/3 columnas)
+
+### Webhook — Ejemplo de payload
+
+```json
+{
+  "event": "transaction.updated",
+  "data": {
+    "transaction": {
+      "id": "15113-1785100058-33815",
+      "status": "APPROVED",
+      "amount_in_cents": 150000
+    }
+  },
+  "signature": {
+    "properties": ["transaction.id", "transaction.status", "transaction.amount_in_cents"],
+    "checksum": "A1B2C3..."
+  },
+  "timestamp": 1530291411
+}
+```
+
+Verificacion: HMAC-SHA256 concatenando valores de `properties` + `timestamp` + `PAYMENT_GATEWAY_EVENTS_SECRET`.
 
 ---
 
@@ -349,21 +415,3 @@ El proyecto sigue principios SOLID y Clean Code. Una auditoria completa encontro
 
 ---
 
-## Proximas Fases
-
-- [x] ~~Catalogo de productos (backend + frontend)~~
-- [x] ~~Value objects: Money, CardNumber, TransactionStatus~~
-- [x] ~~Filtros y busqueda (backend + frontend)~~
-- [x] ~~Formulario de tarjeta + direccion (frontend)~~
-- [x] ~~POST /transactions — Crear transaccion PENDING~~
-- [x] ~~POST /transactions/:id/pay — Procesar pago con gateway~~
-- [x] ~~Backdrop de resumen de pago (frontend)~~
-- [x] ~~Pantalla de resultado de transaccion (frontend)~~
-- [x] ~~redux-persist (checkout + transaction) con exclusion de datos de tarjeta~~
-- [x] ~~Prisma models: Transaction, Customer, Delivery~~
-- [x] ~~POST /webhooks/payment-events — Recepcion de eventos del gateway~~
-- [x] ~~Sync perezoso en GET /transactions/:id como fallback del webhook~~
-- [x] ~~Actualizar stock al confirmar pago (APPROVED)~~
-- [x] ~~Polling frontend cada 3s hasta resultado final~~
-- [x] ~~Resiliencia al refresh con reanudacion de checkout~~
-- [x] ~~Ticket de compra con desglose detallado~~

@@ -49,4 +49,10 @@ describe('FilterBar', () => {
     fireEvent.click(toggle);
     expect(defaultProps.onSortOrderChange).toHaveBeenCalledWith('desc');
   });
+
+  it('deberia alternar a asc cuando sortOrder es desc', () => {
+    render(<FilterBar {...defaultProps} sortBy="price" sortOrder="desc" />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(defaultProps.onSortOrderChange).toHaveBeenCalledWith('asc');
+  });
 });
