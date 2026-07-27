@@ -25,11 +25,10 @@ export class InfraStack extends cdk.Stack {
       emptyOnDelete: true,
     });
 
-    // Importación del secreto creado en AWS Secrets Manager para Wompi
     const wompiSecrets = secretsmanager.Secret.fromSecretNameV2(
       this,
       'WompiPaymentSecrets',
-      'card-checkout/payment-gateway'
+      'prod/card-checkout/payment-gateway'
     );
 
     const frontendUrlSecret = new secretsmanager.Secret(
